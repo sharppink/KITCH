@@ -1,4 +1,4 @@
-// Input Screen - handles news links, screenshots, and YouTube URLs
+// 입력 화면 - 뉴스 링크, 스크린샷, 유튜브 URL 처리
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -29,28 +29,28 @@ type ContentType = 'news' | 'screenshot' | 'youtube';
 
 const typeConfig = {
   news: {
-    title: 'News Article',
-    subtitle: 'Paste a news or financial article URL',
-    placeholder: 'https://reuters.com/markets/...',
+    title: '뉴스 기사',
+    subtitle: '분석할 뉴스 또는 금융 기사의 URL을 입력해주세요',
+    placeholder: 'https://news.einfomax.co.kr/...',
     icon: 'link' as const,
-    inputLabel: 'Article URL',
-    buttonLabel: 'Analyze Article',
+    inputLabel: '기사 URL',
+    buttonLabel: '기사 분석하기',
   },
   screenshot: {
-    title: 'Financial Screenshot',
-    subtitle: 'Upload a screenshot of financial data, charts, or reports',
-    placeholder: 'Tap the upload button below to select an image',
+    title: '금융 스크린샷',
+    subtitle: '실적 보고서, 차트, 공시 등의 스크린샷을 업로드해주세요',
+    placeholder: '아래 버튼을 눌러 이미지를 선택하세요',
     icon: 'image' as const,
-    inputLabel: 'Or paste extracted text (optional)',
-    buttonLabel: 'Analyze Screenshot',
+    inputLabel: '텍스트 직접 입력 (선택사항)',
+    buttonLabel: '스크린샷 분석하기',
   },
   youtube: {
-    title: 'YouTube Video',
-    subtitle: 'Paste a YouTube link for AI analysis of the investment content',
+    title: '유튜브 영상',
+    subtitle: '투자 관련 유튜브 영상 링크를 입력해주세요',
     placeholder: 'https://youtube.com/watch?v=...',
     icon: 'youtube' as const,
-    inputLabel: 'YouTube URL',
-    buttonLabel: 'Analyze Video',
+    inputLabel: '유튜브 URL',
+    buttonLabel: '영상 분석하기',
   },
 };
 
@@ -70,16 +70,14 @@ export default function InputScreen() {
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError('Photo library permission is required to upload screenshots.');
+      setError('사진 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
       quality: 0.9,
     });
-
     if (!result.canceled && result.assets[0]) {
       setSelectedImage(result.assets[0].uri);
       setError(null);
@@ -90,25 +88,25 @@ export default function InputScreen() {
   const validate = (): boolean => {
     if (contentType === 'screenshot') {
       if (!selectedImage && !inputText.trim()) {
-        setError('Please upload a screenshot or paste some text to analyze.');
+        setError('스크린샷을 업로드하거나 텍스트를 입력해주세요.');
         return false;
       }
     } else if (contentType === 'youtube') {
       if (!inputText.trim()) {
-        setError('Please paste a YouTube URL.');
+        setError('유튜브 URL을 입력해주세요.');
         return false;
       }
       if (!isValidYouTubeUrl(inputText.trim())) {
-        setError('Please enter a valid YouTube URL (e.g. https://youtu.be/...)');
+        setError('올바른 유튜브 URL을 입력해주세요. (예: https://youtu.be/...)');
         return false;
       }
     } else {
       if (!inputText.trim()) {
-        setError('Please enter a URL to analyze.');
+        setError('기사 URL을 입력해주세요.');
         return false;
       }
       if (!inputText.startsWith('http')) {
-        setError('Please enter a valid URL starting with http:// or https://');
+        setError('http:// 또는 https://로 시작하는 URL을 입력해주세요.');
         return false;
       }
     }
@@ -121,14 +119,12 @@ export default function InputScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setIsAnalyzing(true);
     setError(null);
 
     try {
       let result;
-
       if (contentType === 'news') {
         result = await analyzeNewsLink(inputText.trim());
       } else if (contentType === 'screenshot') {
@@ -139,18 +135,12 @@ export default function InputScreen() {
         const videoInfo = await fetchVideoInfo(videoId);
         result = await analyzeYouTube(videoId, videoInfo.title);
       }
-
       const historyItem = await saveToHistory(result, inputText.trim() || undefined);
-
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      router.replace({
-        pathname: '/result',
-        params: { historyId: historyItem.id, cached: 'true' },
-      });
+      router.replace({ pathname: '/result', params: { historyId: historyItem.id, cached: 'true' } });
     } catch (err) {
-      console.error('Analysis failed:', err);
-      setError('Analysis failed. Please try again.');
+      console.error('분석 오류:', err);
+      setError('분석에 실패했습니다. 다시 시도해주세요.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsAnalyzing(false);
@@ -158,17 +148,13 @@ export default function InputScreen() {
   };
 
   return (
-    <View style={[styles.container]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <AnalysisLoadingOverlay visible={isAnalyzing} contentType={contentType} />
 
-      {/* Header */}
+      {/* 헤더 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -178,22 +164,15 @@ export default function InputScreen() {
         <View style={styles.backButton} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingBottom: insets.bottom + 120 },
-          ]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 120 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Subtitle */}
           <Text style={styles.subtitle}>{config.subtitle}</Text>
 
-          {/* Screenshot-specific: image upload area */}
+          {/* 스크린샷 이미지 업로드 영역 */}
           {contentType === 'screenshot' && (
             <TouchableOpacity
               onPress={handlePickImage}
@@ -205,7 +184,7 @@ export default function InputScreen() {
                   <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
                   <View style={styles.imageOverlay}>
                     <Feather name="refresh-cw" size={20} color="#fff" />
-                    <Text style={styles.imageOverlayText}>Change Image</Text>
+                    <Text style={styles.imageOverlayText}>이미지 변경</Text>
                   </View>
                 </View>
               ) : (
@@ -213,10 +192,8 @@ export default function InputScreen() {
                   <View style={styles.uploadIconBg}>
                     <Feather name="upload" size={28} color={Colors.primary} />
                   </View>
-                  <Text style={styles.uploadTitle}>Upload Screenshot</Text>
-                  <Text style={styles.uploadSubtitle}>
-                    Tap to select from your photo library
-                  </Text>
+                  <Text style={styles.uploadTitle}>스크린샷 업로드</Text>
+                  <Text style={styles.uploadSubtitle}>탭하여 사진 라이브러리에서 선택하세요</Text>
                   <View style={styles.uploadFormats}>
                     {['PNG', 'JPG', 'HEIC'].map((fmt) => (
                       <View key={fmt} style={styles.formatTag}>
@@ -229,7 +206,7 @@ export default function InputScreen() {
             </TouchableOpacity>
           )}
 
-          {/* URL / text input */}
+          {/* URL / 텍스트 입력 */}
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>{config.inputLabel}</Text>
             <View style={styles.inputWrapper}>
@@ -243,10 +220,7 @@ export default function InputScreen() {
                 ref={inputRef}
                 style={styles.input}
                 value={inputText}
-                onChangeText={(t) => {
-                  setInputText(t);
-                  if (error) setError(null);
-                }}
+                onChangeText={(t) => { setInputText(t); if (error) setError(null); }}
                 placeholder={config.placeholder}
                 placeholderTextColor={Colors.textTertiary}
                 autoCapitalize="none"
@@ -259,11 +233,11 @@ export default function InputScreen() {
             </View>
           </View>
 
-          {/* Tips card */}
+          {/* 팁 카드 */}
           <Card style={styles.tipsCard}>
             <View style={styles.tipsHeader}>
               <Feather name="zap" size={14} color={Colors.warning} />
-              <Text style={styles.tipsTitle}>Tips for best results</Text>
+              <Text style={styles.tipsTitle}>정확한 분석을 위한 팁</Text>
             </View>
             {getTips(contentType).map((tip, i) => (
               <View key={i} style={styles.tip}>
@@ -273,7 +247,7 @@ export default function InputScreen() {
             ))}
           </Card>
 
-          {/* Error */}
+          {/* 오류 메시지 */}
           {error && (
             <View style={styles.errorContainer}>
               <Feather name="alert-circle" size={14} color={Colors.negative} />
@@ -283,10 +257,8 @@ export default function InputScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Sticky analyze button */}
-      <View
-        style={[styles.analyzeButtonContainer, { paddingBottom: insets.bottom + 16 }]}
-      >
+      {/* 분석 시작 버튼 (하단 고정) */}
+      <View style={[styles.analyzeButtonContainer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[styles.analyzeButton, isAnalyzing && styles.analyzeButtonDisabled]}
           onPress={handleAnalyze}
@@ -305,258 +277,61 @@ function getTips(type: ContentType): string[] {
   switch (type) {
     case 'news':
       return [
-        'Paste the full article URL for best analysis',
-        'Works best with Reuters, Bloomberg, CNBC, etc.',
-        'Paywalled articles may have limited analysis',
+        '전체 기사 URL을 붙여넣으면 가장 정확한 분석이 가능합니다',
+        '로이터, 블룸버그, 한국경제, 연합뉴스 등의 기사를 지원합니다',
+        '유료 구독 기사는 분석이 제한될 수 있습니다',
       ];
     case 'screenshot':
       return [
-        'Ensure text in the image is clear and legible',
-        'Screenshots of earnings, charts, or news work great',
-        'Higher resolution images produce better OCR results',
+        '이미지 내 텍스트가 선명하게 보여야 정확한 분석이 가능합니다',
+        '실적 발표, 차트, 애널리스트 보고서 스크린샷에 최적화되어 있습니다',
+        '해상도가 높을수록 OCR 정확도가 향상됩니다',
       ];
     case 'youtube':
       return [
-        'Supports youtube.com and youtu.be links',
-        'Best for analysis-focused financial videos',
-        'Works with shorts, regular videos, and embeds',
+        'youtube.com 및 youtu.be 링크를 모두 지원합니다',
+        '투자 분석, 종목 리뷰, 경제 뉴스 영상에 최적화되어 있습니다',
+        '쇼츠, 일반 영상, 임베드 링크 모두 지원합니다',
       ];
   }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  headerTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
-    color: Colors.text,
-  },
-  scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  subtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  imageUploadArea: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    overflow: 'hidden',
-    marginBottom: 20,
-    minHeight: 180,
-    backgroundColor: Colors.surface,
-  },
-  imageUploadAreaFilled: {
-    borderStyle: 'solid',
-    borderColor: Colors.primary,
-  },
-  uploadPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 10,
-  },
-  uploadIconBg: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  uploadTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
-    color: Colors.text,
-  },
-  uploadSubtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  uploadFormats: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
-  },
-  formatTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: Colors.border,
-  },
-  formatText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 10,
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
-  },
-  imagePreviewWrapper: {
-    position: 'relative',
-  },
-  imagePreview: {
-    width: '100%',
-    height: 220,
-    resizeMode: 'cover',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingVertical: 10,
-  },
-  imageOverlayText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: '#fff',
-  },
-  inputSection: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  inputIcon: {
-    marginTop: 2,
-  },
-  input: {
-    flex: 1,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    color: Colors.text,
-    textAlignVertical: 'top',
-    minHeight: 22,
-  },
-  tipsCard: {
-    gap: 10,
-    marginBottom: 16,
-  },
-  tipsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  tipsTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: Colors.warning,
-  },
-  tip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  tipDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: Colors.border,
-    marginTop: 6,
-  },
-  tipText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    color: Colors.textSecondary,
-    flex: 1,
-    lineHeight: 18,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 10,
-    padding: 12,
-  },
-  errorText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.negative,
-    flex: 1,
-  },
-  analyzeButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  analyzeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-  },
-  analyzeButtonDisabled: {
-    opacity: 0.5,
-  },
-  analyzeButtonText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-    color: '#fff',
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
+  scroll: { paddingHorizontal: 20, paddingTop: 8 },
+  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary, marginBottom: 20, lineHeight: 21 },
+  imageUploadArea: { borderRadius: 16, borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed', overflow: 'hidden', marginBottom: 20, minHeight: 180, backgroundColor: Colors.surface },
+  imageUploadAreaFilled: { borderStyle: 'solid', borderColor: Colors.primary },
+  uploadPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 },
+  uploadIconBg: { width: 60, height: 60, borderRadius: 18, backgroundColor: 'rgba(75, 95, 214, 0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  uploadTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
+  uploadSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  uploadFormats: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  formatTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: Colors.border },
+  formatText: { fontFamily: 'Inter_500Medium', fontSize: 10, color: Colors.textSecondary, letterSpacing: 0.5 },
+  imagePreviewWrapper: { position: 'relative' },
+  imagePreview: { width: '100%', height: 220, resizeMode: 'cover' },
+  imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.6)', paddingVertical: 10 },
+  imageOverlayText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#fff' },
+  inputSection: { marginBottom: 16 },
+  inputLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary, marginBottom: 8 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
+  inputIcon: { marginTop: 2 },
+  input: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.text, textAlignVertical: 'top', minHeight: 22 },
+  tipsCard: { gap: 10, marginBottom: 16 },
+  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  tipsTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.warning },
+  tip: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  tipDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.border, marginTop: 6 },
+  tipText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
+  errorContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)', borderRadius: 10, padding: 12 },
+  errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.negative, flex: 1 },
+  analyzeButtonContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.border },
+  analyzeButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16 },
+  analyzeButtonDisabled: { opacity: 0.5 },
+  analyzeButtonText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
 });

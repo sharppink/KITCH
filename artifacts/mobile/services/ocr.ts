@@ -1,5 +1,5 @@
-// OCR Service - Placeholder implementation
-// In production, this would use a vision API (e.g. Google Cloud Vision, AWS Textract)
+// OCR 서비스 - 플레이스홀더 구현
+// 실제 서비스에서는 Google Cloud Vision 또는 AWS Textract를 사용합니다
 
 export interface OCRResult {
   text: string;
@@ -8,51 +8,48 @@ export interface OCRResult {
 }
 
 /**
- * Mock OCR extraction from image URI
- * In production: upload image to OCR API and return extracted text
+ * 이미지 URI에서 텍스트 추출 (목업)
  */
 export async function extractTextFromImage(imageUri: string): Promise<OCRResult> {
-  // Simulate OCR processing time
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
   const mockTexts = [
-    `BREAKING: Major tech company reports record Q4 earnings
-    Revenue: $98.5B (+12% YoY)
-    EPS: $2.41 (beat est. $2.10)
-    Cloud segment: +28% growth
-    AI products driving 40% of new enterprise contracts
-    Stock up 8% in after-hours trading
-    CEO comments: "We are just beginning to see the AI monetization flywheel"`,
+    `속보: 주요 기술 기업 4분기 실적 발표
+    매출: 98.5조원 (전년비 +12%)
+    EPS: 2,410원 (예상치 2,100원 상회)
+    클라우드 부문: +28% 성장
+    AI 제품이 신규 기업 계약의 40% 견인
+    장외에서 주가 8% 상승
+    CEO 코멘트: "AI 수익화 플라이휠은 이제 시작에 불과"`,
 
-    `MARKET UPDATE - Financial Times
-    S&P 500 closes at all-time high: 5,847.22 (+1.2%)
-    Nasdaq Composite: 18,391 (+1.8%)
-    Dow Jones: 42,156 (+0.9%)
+    `시장 업데이트 - 한국경제
+    코스피 3,247.22 (+1.2%)
+    코스닥 891.56 (+1.8%)
     
-    Top gainers: NVDA +6.2%, META +4.1%, AMZN +3.7%
-    Top losers: CVX -2.1%, XOM -1.8%
+    상승 주도주: 삼성전자 +3.2%, SK하이닉스 +4.1%, NAVER +2.7%
+    하락주: 현대차 -1.8%, 기아 -1.2%
     
-    Fed minutes suggest two rate cuts in 2025
-    10-year Treasury yield: 4.21% (-8bps)`,
+    미 연준 의사록 2025년 금리 2회 인하 시사
+    국고채 10년 3.21% (-8bp)`,
 
-    `Analyst Report: BUY Rating Initiated
-    Company: NextGen AI Technologies
-    Price Target: $245 (current: $178)
-    Upside: 37.6%
+    `애널리스트 보고서: 매수 의견 개시
+    기업: 넥스트젠AI테크놀로지
+    목표주가: 245,000원 (현재: 178,000원)
+    상승여력: 37.6%
     
-    Key catalysts:
-    - Enterprise AI contracts pipeline $2.1B
-    - Margin expansion 300bps expected FY25
-    - International expansion underway
+    주요 촉매제:
+    - 기업용 AI 계약 파이프라인 2.1조원
+    - FY25 마진 300bp 개선 예상
+    - 해외 사업 확장 진행 중
     
-    Risks: Competition from Big Tech, regulation uncertainty`,
+    리스크: 빅테크 경쟁, 규제 불확실성`,
   ];
 
   const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
 
   return {
     text: randomText,
-    confidence: 0.87 + Math.random() * 0.12, // 87-99% confidence
+    confidence: 0.87 + Math.random() * 0.12,
     wordCount: randomText.split(/\s+/).length,
   };
 }

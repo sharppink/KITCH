@@ -1,5 +1,5 @@
-// YouTube Parser Service
-// Extracts video ID and metadata from YouTube URLs
+// 유튜브 파서 서비스
+// 유튜브 URL에서 영상 ID 및 메타데이터 추출
 
 export interface YouTubeVideoInfo {
   videoId: string;
@@ -11,79 +11,67 @@ export interface YouTubeVideoInfo {
 }
 
 /**
- * Extract YouTube video ID from various URL formats
- * Supports: youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID
+ * 다양한 URL 형식에서 유튜브 영상 ID 추출
  */
 export function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/, // Raw video ID
+    /^([a-zA-Z0-9_-]{11})$/,
   ];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
+    if (match && match[1]) return match[1];
   }
 
   return null;
 }
 
-/**
- * Validate YouTube URL format
- */
 export function isValidYouTubeUrl(url: string): boolean {
   return extractVideoId(url) !== null;
 }
 
-/**
- * Get YouTube thumbnail URL from video ID
- */
 export function getThumbnailUrl(videoId: string): string {
   return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 }
 
 /**
- * Mock YouTube video metadata fetch
- * In production: use YouTube Data API v3
+ * 유튜브 영상 메타데이터 목업 조회
  */
 export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo> {
-  // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 800));
 
   const mockVideos: Partial<YouTubeVideoInfo>[] = [
     {
-      title: 'Why I\'m All In On NVIDIA Stock in 2025',
-      description: 'Deep dive into NVIDIA\'s AI chip dominance, data center growth, and whether the stock is overvalued at current prices.',
-      channelName: 'TechInvestor Pro',
-      mockTranscript: `Today we're talking about NVIDIA and why I think it's the most important stock to own heading into 2025. 
-      The company's H100 and H200 GPUs are essentially the picks and shovels of the AI gold rush. 
-      Data center revenue has grown 400% year over year. Microsoft, Google, and Amazon are all competing fiercely for GPU capacity. 
-      The real question is whether the stock at 40x forward earnings is overvalued. I don't think so when you factor in the software moat from CUDA. 
-      My price target for end of 2025 is $180, representing 25% upside from current levels. Risk factors include AMD competition and potential China export restrictions.`,
+      title: '2025년 엔비디아 주식, 지금 매수해야 하는 이유',
+      description: 'AI 칩 시장에서 엔비디아의 독보적 지위, 데이터센터 성장, 현재 주가 적정성을 심층 분석합니다.',
+      channelName: '테크인베스터 PRO',
+      mockTranscript: `오늘은 엔비디아와 2025년에 이 종목에 집중해야 하는 이유를 이야기합니다.
+      H100과 H200 GPU는 사실상 AI 골드러시의 곡괭이와 삽입니다.
+      데이터센터 매출은 전년 대비 400% 성장했습니다.
+      마이크로소프트, 구글, 아마존이 GPU 확보를 위해 치열하게 경쟁하고 있습니다.
+      40배 포워드 PER이 고평가인지 의문이지만, CUDA 소프트웨어 해자를 고려하면 그렇지 않습니다.
+      2025년 말 목표주가는 180달러, 현재 대비 25% 상승여력입니다.`,
     },
     {
-      title: 'The Truth About Crypto in 2025 - Bitcoin ETF Impact',
-      description: 'Analyzing the real impact of Bitcoin ETFs on institutional adoption and what it means for retail investors.',
-      channelName: 'CryptoInsights Daily',
-      mockTranscript: `Bitcoin ETFs have fundamentally changed the landscape for crypto investing. 
-      BlackRock's iShares Bitcoin Trust now holds over $25B in assets after just 6 months. 
-      Institutional flows are driving price discovery in ways we've never seen before. 
-      The halvening in April reduced supply by 50%, creating classic supply shock conditions. 
-      I'm cautiously bullish on Bitcoin reaching $100k but the path won't be linear. 
-      Alt coins remain highly speculative. Only invest what you can afford to lose completely.`,
+      title: '비트코인 현물 ETF의 충격 — 개인 투자자가 알아야 할 것',
+      description: '비트코인 현물 ETF가 기관 자금 유입에 미치는 실질적 영향과 개인 투자자를 위한 시사점을 분석합니다.',
+      channelName: '크립토인사이트 데일리',
+      mockTranscript: `비트코인 ETF는 암호화폐 투자 환경을 근본적으로 바꿔 놓았습니다.
+      블랙록 아이셰어즈 비트코인 트러스트는 출시 6개월 만에 25조원 이상을 운용하고 있습니다.
+      기관 자금 흐름이 전례 없는 방식으로 가격을 결정하고 있습니다.
+      4월 반감기는 공급을 50% 줄여 고전적인 공급 충격 조건을 만들었습니다.
+      비트코인의 1억원 돌파에 대해 신중하게 낙관하지만, 경로는 직선이 아닐 것입니다.`,
     },
     {
-      title: 'Warren Buffett\'s Portfolio Changes - What He\'s Buying Now',
-      description: 'Breaking down Berkshire Hathaway\'s latest 13F filing and what Buffett\'s moves tell us about the market.',
-      channelName: 'ValueInvesting Today',
-      mockTranscript: `Berkshire Hathaway's latest 13F filing reveals some surprising moves. 
-      Buffett has been trimming Apple dramatically - down from 50% of portfolio to 40%. 
-      He's been building cash to record levels near $170B, suggesting caution about valuations. 
-      New additions include a significant stake in Occidental Petroleum's oil operations. 
-      The Oracle of Omaha is clearly concerned about market valuations after the recent rally. 
-      Cash is a strategic weapon, and at 5% yields, sitting in T-bills isn't a bad return while waiting.`,
+      title: '버핏의 포트폴리오 변화 — 지금 무엇을 사고 있나',
+      description: '버크셔 해서웨이 최신 13F 공시를 분석하고 버핏의 행보가 시장에 주는 시사점을 파악합니다.',
+      channelName: '가치투자 투데이',
+      mockTranscript: `버크셔 해서웨이 최신 13F에서 놀라운 움직임이 포착됩니다.
+      버핏은 애플 비중을 포트폴리오의 50%에서 40%로 대폭 축소했습니다.
+      현금을 170조원 수준의 사상 최고치로 늘리며 밸류에이션에 대한 경계심을 드러냈습니다.
+      옥시덴털 페트롤리엄 지분을 새롭게 대규모로 편입했습니다.
+      현금은 전략적 무기이며, 5% 수익률에서 기다리는 것도 나쁘지 않다고 판단한 듯합니다.`,
     },
   ];
 

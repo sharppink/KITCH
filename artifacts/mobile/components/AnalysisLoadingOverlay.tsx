@@ -1,14 +1,14 @@
-// Animated loading overlay shown during AI analysis
+// AI 분석 중 애니메이션 로딩 오버레이
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import Colors from '@/constants/colors';
 
 const MESSAGES = [
-  'Extracting content...',
-  'Running AI analysis...',
-  'Scoring credibility...',
-  'Finding stock signals...',
-  'Generating insights...',
+  '콘텐츠 추출 중...',
+  'AI 분석 실행 중...',
+  '신뢰도 채점 중...',
+  '투자 신호 탐색 중...',
+  '인사이트 생성 중...',
 ];
 
 interface AnalysisLoadingOverlayProps {
@@ -23,32 +23,19 @@ export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoading
 
   useEffect(() => {
     if (visible) {
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      // Pulse animation
+      Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 0.6, duration: 700, useNativeDriver: true }),
         ])
       ).start();
-
-      // Cycle through messages
       const interval = setInterval(() => {
         setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
       }, 700);
-
       return () => clearInterval(interval);
     } else {
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
       pulseAnim.stopAnimation();
     }
   }, [visible]);
@@ -56,16 +43,11 @@ export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoading
   if (!visible) return null;
 
   const typeLabel =
-    contentType === 'news'
-      ? 'article'
-      : contentType === 'screenshot'
-      ? 'screenshot'
-      : 'video';
+    contentType === 'news' ? '기사' : contentType === 'screenshot' ? '스크린샷' : '영상';
 
   return (
     <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
       <View style={styles.card}>
-        {/* Animated logo circles */}
         <View style={styles.loaderContainer}>
           {[0, 1, 2].map((i) => (
             <Animated.View
@@ -74,14 +56,7 @@ export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoading
                 styles.dot,
                 {
                   opacity: pulseAnim,
-                  transform: [
-                    {
-                      scale: pulseAnim.interpolate({
-                        inputRange: [0.6, 1],
-                        outputRange: [0.8, 1 - i * 0.1],
-                      }),
-                    },
-                  ],
+                  transform: [{ scale: pulseAnim.interpolate({ inputRange: [0.6, 1], outputRange: [0.8, 1 - i * 0.1] }) }],
                   marginLeft: i > 0 ? -16 : 0,
                   zIndex: 3 - i,
                   backgroundColor: i === 0 ? Colors.primary : i === 1 ? Colors.accent : Colors.warning,
@@ -91,19 +66,12 @@ export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoading
           ))}
         </View>
 
-        <Text style={styles.title}>Analyzing your {typeLabel}</Text>
+        <Text style={styles.title}>{typeLabel} 분석 중</Text>
         <Text style={styles.message}>{MESSAGES[messageIndex]}</Text>
 
-        {/* Progress dots */}
         <View style={styles.progressDots}>
           {MESSAGES.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.progressDot,
-                i === messageIndex && styles.progressDotActive,
-              ]}
-            />
+            <View key={i} style={[styles.progressDot, i === messageIndex && styles.progressDotActive]} />
           ))}
         </View>
       </View>
@@ -114,11 +82,10 @@ export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoading
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: 'rgba(13, 14, 31, 0.88)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
-    backdropFilter: 'blur(10px)',
   },
   card: {
     backgroundColor: Colors.surface,
@@ -135,44 +102,11 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
   },
-  loaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dot: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: Colors.background,
-  },
-  title: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 17,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  message: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    minHeight: 20,
-  },
-  progressDots: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
-  },
-  progressDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: Colors.border,
-  },
-  progressDotActive: {
-    backgroundColor: Colors.primary,
-    width: 14,
-  },
+  loaderContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  dot: { width: 48, height: 48, borderRadius: 24, borderWidth: 3, borderColor: Colors.background },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text, textAlign: 'center' },
+  message: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, textAlign: 'center', minHeight: 20 },
+  progressDots: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  progressDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.border },
+  progressDotActive: { backgroundColor: Colors.primary, width: 14 },
 });

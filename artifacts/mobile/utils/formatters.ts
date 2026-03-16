@@ -1,86 +1,53 @@
-// Utility formatters for InvestLens
+// 유틸리티 포매터 - InvestLens 한글 버전
 
 import { Sentiment, RiskLevel } from '@/services/aiAnalysis';
 import Colors from '@/constants/colors';
 
-/**
- * Format a credibility score into a label
- */
 export function getCredibilityLabel(score: number): string {
-  if (score >= 80) return 'High Credibility';
-  if (score >= 60) return 'Moderate Credibility';
-  if (score >= 40) return 'Low Credibility';
-  return 'Very Low Credibility';
+  if (score >= 80) return '신뢰도 높음';
+  if (score >= 60) return '신뢰도 보통';
+  if (score >= 40) return '신뢰도 낮음';
+  return '신뢰도 매우 낮음';
 }
 
-/**
- * Get color for a credibility score
- */
 export function getCredibilityColor(score: number): string {
   if (score >= 80) return Colors.credibilityHigh;
   if (score >= 60) return Colors.credibilityMedium;
   return Colors.credibilityLow;
 }
 
-/**
- * Get color for sentiment
- */
 export function getSentimentColor(sentiment: Sentiment): string {
   switch (sentiment) {
-    case 'positive':
-      return Colors.positive;
-    case 'negative':
-      return Colors.negative;
-    case 'neutral':
-      return Colors.neutral;
+    case 'positive': return Colors.positive;
+    case 'negative': return Colors.negative;
+    case 'neutral': return Colors.neutral;
   }
 }
 
-/**
- * Get display label for sentiment
- */
 export function getSentimentLabel(sentiment: Sentiment): string {
   switch (sentiment) {
-    case 'positive':
-      return 'Bullish';
-    case 'negative':
-      return 'Bearish';
-    case 'neutral':
-      return 'Neutral';
+    case 'positive': return '강세';
+    case 'negative': return '약세';
+    case 'neutral': return '중립';
   }
 }
 
-/**
- * Get color for risk level
- */
 export function getRiskColor(risk: RiskLevel): string {
   switch (risk) {
-    case 'low':
-      return Colors.riskLow;
-    case 'medium':
-      return Colors.riskMedium;
-    case 'high':
-      return Colors.riskHigh;
+    case 'low': return Colors.riskLow;
+    case 'medium': return Colors.riskMedium;
+    case 'high': return Colors.riskHigh;
   }
 }
 
-/**
- * Get display label for risk level
- */
 export function getRiskLabel(risk: RiskLevel): string {
   switch (risk) {
-    case 'low':
-      return 'Low Risk';
-    case 'medium':
-      return 'Medium Risk';
-    case 'high':
-      return 'High Risk';
+    case 'low': return '저위험';
+    case 'medium': return '중위험';
+    case 'high': return '고위험';
   }
 }
 
-/**
- * Format a date for display
- */
 export function formatDate(date: Date): string {
   const now = new Date();
   const diff = now.getTime() - date.getTime();
@@ -88,20 +55,14 @@ export function formatDate(date: Date): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+  if (hours < 24) return `${hours}시간 전`;
+  if (days < 7) return `${days}일 전`;
 
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 }
 
-/**
- * Truncate a URL for display
- */
 export function truncateUrl(url: string, maxLength = 40): string {
   try {
     const parsed = new URL(url);
@@ -114,20 +75,22 @@ export function truncateUrl(url: string, maxLength = 40): string {
   }
 }
 
-/**
- * Get content type icon name (Feather icons)
- */
 export function getContentTypeIcon(
   contentType: string
 ): { name: string; family: 'Feather' | 'Ionicons' } {
   switch (contentType) {
-    case 'news':
-      return { name: 'link', family: 'Feather' };
-    case 'screenshot':
-      return { name: 'image', family: 'Feather' };
-    case 'youtube':
-      return { name: 'youtube', family: 'Feather' };
-    default:
-      return { name: 'file', family: 'Feather' };
+    case 'news': return { name: 'link', family: 'Feather' };
+    case 'screenshot': return { name: 'image', family: 'Feather' };
+    case 'youtube': return { name: 'youtube', family: 'Feather' };
+    default: return { name: 'file', family: 'Feather' };
+  }
+}
+
+export function getContentTypeLabel(contentType: string): string {
+  switch (contentType) {
+    case 'news': return '뉴스';
+    case 'screenshot': return '스크린샷';
+    case 'youtube': return '유튜브';
+    default: return '콘텐츠';
   }
 }

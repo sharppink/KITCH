@@ -1,4 +1,4 @@
-// Sentiment and risk level badges
+// 심리 및 리스크 레벨 배지 컴포넌트
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';

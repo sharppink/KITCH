@@ -1,48 +1,47 @@
-// InvestLens color palette - Modern fintech dark theme
+// InvestLens 색상 팔레트 - 딥 네이비 퍼플 핀테크 테마
 const Colors = {
-  // Backgrounds
-  background: '#0F172A',       // Deep navy - main background
-  surface: '#1E293B',          // Card/surface background
-  surfaceElevated: '#243447',  // Slightly elevated surface
-  border: '#334155',           // Subtle border
-  borderLight: '#475569',      // Lighter border
+  // 배경
+  background: '#0D0E1F',       // 딥 네이비 - 메인 배경
+  surface: '#161728',          // 카드/서피스 배경
+  surfaceElevated: '#1E1F35',  // 약간 높은 서피스
+  border: '#2A2B45',           // 섬세한 보더
+  borderLight: '#3A3B58',      // 밝은 보더
 
-  // Brand colors
-  primary: '#2563EB',          // Electric blue - primary actions
-  primaryLight: '#3B82F6',     // Lighter blue
-  accent: '#22C55E',           // Emerald green - positive/accent
-  accentLight: '#4ADE80',      // Lighter green
+  // 브랜드 컬러
+  primary: '#4B5FD6',          // 인디고 블루 - 주요 액션
+  primaryLight: '#6677E8',     // 밝은 인디고
+  accent: '#22C55E',           // 에메랄드 그린 - 양수/액센트
+  accentLight: '#4ADE80',      // 밝은 그린
 
-  // Semantic
-  positive: '#22C55E',         // Green - positive sentiment, gains
-  negative: '#EF4444',         // Red - negative sentiment, losses
-  warning: '#F59E0B',          // Amber - medium/warning
-  neutral: '#94A3B8',          // Gray - neutral sentiment
+  // 시맨틱
+  positive: '#22C55E',         // 초록 - 긍정 심리, 상승
+  negative: '#EF4444',         // 빨강 - 부정 심리, 하락
+  warning: '#F59E0B',          // 앰버 - 중립/경고
+  neutral: '#94A3B8',          // 회색 - 중립 심리
 
-  // Text
-  text: '#F8FAFC',             // Primary text - near white
-  textSecondary: '#94A3B8',    // Secondary text - muted
-  textTertiary: '#64748B',     // Tertiary text - very muted
-  textInverse: '#0F172A',      // Text on light backgrounds
+  // 텍스트
+  text: '#F0F0FF',             // 주요 텍스트 - 거의 흰색
+  textSecondary: '#8B8FA8',    // 보조 텍스트 - 음소거됨
+  textTertiary: '#5C5F78',     // 3차 텍스트 - 매우 음소거됨
+  textInverse: '#0D0E1F',      // 밝은 배경 위 텍스트
 
-  // Tab bar
-  tabIconDefault: '#64748B',
-  tabIconSelected: '#2563EB',
-  tint: '#2563EB',
+  // 탭바
+  tabIconDefault: '#5C5F78',
+  tabIconSelected: '#4B5FD6',
+  tint: '#4B5FD6',
 
-  // Gradients (used with LinearGradient)
-  gradientPrimary: ['#1D4ED8', '#2563EB', '#3B82F6'] as const,
+  // 그라디언트
+  gradientPrimary: ['#3346C4', '#4B5FD6', '#6677E8'] as const,
   gradientAccent: ['#16A34A', '#22C55E', '#4ADE80'] as const,
-  gradientSurface: ['#1E293B', '#243447'] as const,
-  gradientDanger: ['#B91C1C', '#EF4444'] as const,
-  gradientBackground: ['#0F172A', '#1E293B', '#0F172A'] as const,
+  gradientSurface: ['#161728', '#1E1F35'] as const,
+  gradientBackground: ['#0D0E1F', '#161728', '#0D0E1F'] as const,
 
-  // Risk levels
+  // 리스크 레벨
   riskLow: '#22C55E',
   riskMedium: '#F59E0B',
   riskHigh: '#EF4444',
 
-  // Credibility score
+  // 신뢰도 점수
   credibilityHigh: '#22C55E',
   credibilityMedium: '#F59E0B',
   credibilityLow: '#EF4444',
