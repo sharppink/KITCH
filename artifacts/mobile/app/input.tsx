@@ -128,12 +128,24 @@ export default function InputScreen() {
       if (contentType === 'news') {
         result = await analyzeNewsLink(inputText.trim());
       } else if (contentType === 'screenshot') {
-        const ocrResult = await extractTextFromImage(selectedImage || '');
-        result = await analyzeScreenshot(ocrResult.text);
+        let imageBase64 = '';
+        if (selectedImage) {
+          const response = await fetch(selectedImage);
+          const blob = await response.blob();
+          imageBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const b64 = (reader.result as string).split(',')[1];
+              resolve(b64 ?? '');
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+        result = await analyzeScreenshot(imageBase64 || inputText.trim());
       } else {
         const videoId = extractVideoId(inputText.trim())!;
-        const videoInfo = await fetchVideoInfo(videoId);
-        result = await analyzeYouTube(videoId, videoInfo.title);
+        result = await analyzeYouTube(videoId, inputText.trim());
       }
       const historyItem = await saveToHistory(result, inputText.trim() || undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
