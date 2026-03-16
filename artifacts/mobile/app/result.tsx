@@ -85,7 +85,7 @@ export default function ResultScreen() {
 
       {/* 헤더 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.push('/kitch-home')} style={styles.backButton} activeOpacity={0.7}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>분석 결과</Text>
@@ -217,7 +217,7 @@ export default function ResultScreen() {
           </View>
 
           {/* 추가 분석 버튼 */}
-          <TouchableOpacity style={styles.analyzeAnotherButton} onPress={() => router.push('/')} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.analyzeAnotherButton} onPress={() => router.push('/analyze-sheet')} activeOpacity={0.8}>
             <Feather name="plus-circle" size={16} color={Colors.primary} />
             <Text style={styles.analyzeAnotherText}>다른 콘텐츠 분석하기</Text>
           </TouchableOpacity>
