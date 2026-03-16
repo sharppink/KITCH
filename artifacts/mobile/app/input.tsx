@@ -56,11 +56,11 @@ const typeConfig = {
 
 export default function InputScreen() {
   const insets = useSafeAreaInsets();
-  const { type } = useLocalSearchParams<{ type: ContentType }>();
+  const { type, sharedUrl } = useLocalSearchParams<{ type: ContentType; sharedUrl?: string }>();
   const contentType: ContentType = type ?? 'news';
   const config = typeConfig[contentType];
 
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(sharedUrl ?? '');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
