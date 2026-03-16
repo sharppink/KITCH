@@ -70,7 +70,7 @@ export default function ResultScreen() {
   if (!result) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="dark-content" />
         <Feather name="loader" size={32} color={Colors.textTertiary} />
         <Text style={styles.loadingText}>분석 결과 불러오는 중...</Text>
       </View>
@@ -81,7 +81,7 @@ export default function ResultScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       {/* 헤더 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>

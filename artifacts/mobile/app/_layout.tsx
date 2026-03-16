@@ -68,7 +68,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.background }}>
+          <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F5F5FA' }}>
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -77,6 +77,8 @@ export default function RootLayout() {
               }}
             >
               <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="kiwoom-menu" options={{ headerShown: false, animation: 'slide_from_left' }} />
+              <Stack.Screen name="kitch-home" options={{ headerShown: false }} />
               <Stack.Screen name="input" options={{ headerShown: false }} />
               <Stack.Screen name="result" options={{ headerShown: false }} />
               <Stack.Screen

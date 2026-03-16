@@ -149,7 +149,7 @@ export default function InputScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <AnalysisLoadingOverlay visible={isAnalyzing} contentType={contentType} />
 
       {/* 헤더 */}
