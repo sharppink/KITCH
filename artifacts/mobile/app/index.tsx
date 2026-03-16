@@ -1,9 +1,8 @@
-// 홈 화면 - InvestLens 메인 진입점
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import {
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,14 +12,72 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
-import { UploadButton } from '@/components/UploadButton';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { HistoryCard } from '@/components/HistoryCard';
 import { HistoryItem } from '@/hooks/useAnalysisHistory';
 
+const MOCK_FEED = [
+  {
+    id: '1',
+    source: '한국경제',
+    sourceIcon: '📰',
+    title: '삼성전자, HBM4 양산 본격화…엔비디아에 공급 임박',
+    sentiment: 'positive' as const,
+    sentimentLabel: '긍정',
+    time: '12분 전',
+    tags: ['삼성전자', 'HBM', 'NVDA'],
+  },
+  {
+    id: '2',
+    source: '매일경제',
+    sourceIcon: '📊',
+    title: '미 연준, 금리 동결 결정…시장 반응 엇갈려',
+    sentiment: 'neutral' as const,
+    sentimentLabel: '중립',
+    time: '34분 전',
+    tags: ['연준', '금리', 'USD'],
+  },
+  {
+    id: '3',
+    source: '조선비즈',
+    sourceIcon: '📈',
+    title: 'SK하이닉스, 2분기 영업이익 전망치 상향 조정',
+    sentiment: 'positive' as const,
+    sentimentLabel: '긍정',
+    time: '1시간 전',
+    tags: ['SK하이닉스', '반도체'],
+  },
+  {
+    id: '4',
+    source: '이데일리',
+    sourceIcon: '⚠️',
+    title: '중국 경기 침체 우려…코스피 외국인 순매도 확대',
+    sentiment: 'negative' as const,
+    sentimentLabel: '부정',
+    time: '2시간 전',
+    tags: ['코스피', '중국', '외국인'],
+  },
+  {
+    id: '5',
+    source: '한국경제TV',
+    sourceIcon: '🎥',
+    title: '2차전지 업종 반등 신호…에코프로 강세 지속',
+    sentiment: 'positive' as const,
+    sentimentLabel: '긍정',
+    time: '3시간 전',
+    tags: ['에코프로', '2차전지'],
+  },
+];
+
+const SENTIMENT_COLORS = {
+  positive: Colors.positive,
+  negative: Colors.negative,
+  neutral: Colors.warning,
+};
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { history, deleteFromHistory } = useAnalysisHistory();
+  const { history } = useAnalysisHistory();
 
   const handleViewResult = (item: HistoryItem) => {
     router.push({ pathname: '/result', params: { historyId: item.id, cached: 'true' } });
@@ -29,180 +86,159 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
+
+      {/* 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Image
+          source={require('@/assets/images/kitch-logo-transparent.png')}
+          style={styles.logo}
+          tintColor="#FFFFFF"
+          resizeMode="contain"
+        />
+        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+          <Feather name="bell" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
       >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <View>
-            <View style={styles.logoRow}>
-              <LinearGradient
-                colors={['#4B5FD6', '#22C55E']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoIcon}
-              >
-                <Feather name="search" size={18} color="#fff" />
-              </LinearGradient>
-              <Text style={styles.appTitle}>InvestLens</Text>
+        {/* 섹션: 투자 정보 피드 */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>투자 정보</Text>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>실시간</Text>
+        </View>
+
+        {MOCK_FEED.map((item) => (
+          <TouchableOpacity key={item.id} style={styles.feedCard} activeOpacity={0.75}>
+            <View style={styles.feedTop}>
+              <View style={styles.sourceRow}>
+                <Text style={styles.sourceIcon}>{item.sourceIcon}</Text>
+                <Text style={styles.sourceName}>{item.source}</Text>
+                <Text style={styles.feedTime}>{item.time}</Text>
+              </View>
+              <View style={[styles.sentimentDot, { backgroundColor: SENTIMENT_COLORS[item.sentiment] }]} />
             </View>
-            <Text style={styles.tagline}>AI 기반 투자 정보 분석 서비스</Text>
-          </View>
-          <TouchableOpacity style={styles.historyIcon} activeOpacity={0.7}>
-            <Feather name="bell" size={20} color={Colors.textSecondary} />
+            <Text style={styles.feedTitle}>{item.title}</Text>
+            <View style={styles.tagRow}>
+              {item.tags.map((tag) => (
+                <View key={tag} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
           </TouchableOpacity>
-        </View>
+        ))}
 
-        {/* 히어로 배너 */}
-        <LinearGradient
-          colors={['#2D3A9E', '#4B5FD6']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroBanner}
-        >
-          <View style={styles.heroBannerContent}>
-            <Text style={styles.heroTitle}>어떤 투자 정보든 AI가 분석해드립니다</Text>
-            <Text style={styles.heroSubtitle}>
-              뉴스 링크, 스크린샷, 유튜브 영상을 입력하면 AI가 즉시 핵심 인사이트를 제공합니다.
-            </Text>
-          </View>
-          <View style={styles.heroStats}>
-            {[
-              { label: '뉴스', icon: 'link' as const },
-              { label: '스크린샷', icon: 'image' as const },
-              { label: '유튜브', icon: 'youtube' as const },
-            ].map(({ label, icon }) => (
-              <View key={label} style={styles.heroStat}>
-                <Feather name={icon} size={16} color="rgba(255,255,255,0.9)" />
-                <Text style={styles.heroStatLabel}>{label}</Text>
-              </View>
-            ))}
-          </View>
-        </LinearGradient>
-
-        {/* 분석 섹션 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>분석 시작하기</Text>
-
-          <UploadButton
-            label="뉴스 링크 붙여넣기"
-            sublabel="기사 URL을 입력하면 AI가 요약해드립니다"
-            icon="link"
-            onPress={() => router.push({ pathname: '/input', params: { type: 'news' } })}
-            variant="primary"
-          />
-          <UploadButton
-            label="스크린샷 업로드"
-            sublabel="차트, 실적표, 보고서 이미지 분석"
-            icon="image"
-            onPress={() => router.push({ pathname: '/input', params: { type: 'screenshot' } })}
-            variant="secondary"
-          />
-          <UploadButton
-            label="유튜브 영상 분석"
-            sublabel="투자 관련 영상 링크를 붙여넣으세요"
-            icon="youtube"
-            onPress={() => router.push({ pathname: '/input', params: { type: 'youtube' } })}
-            variant="secondary"
-          />
-        </View>
-
-        {/* 주의사항 */}
-        <View style={styles.disclaimer}>
-          <Feather name="info" size={12} color={Colors.textTertiary} />
-          <Text style={styles.disclaimerText}>
-            본 서비스는 교육 목적으로만 제공됩니다. 투자 권유가 아닙니다.
-          </Text>
-        </View>
-
-        {/* 최근 분석 기록 */}
+        {/* 분석 기록 */}
         {history.length > 0 && (
-          <View style={styles.section}>
+          <View style={{ marginTop: 8 }}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>최근 분석 기록</Text>
-              <View style={styles.sectionBadge}>
-                <Text style={styles.sectionCount}>{history.length}건</Text>
+              <Text style={styles.sectionTitle}>내 분석 기록</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{history.length}</Text>
               </View>
             </View>
-            {history.slice(0, 5).map((item) => (
+            {history.slice(0, 3).map((item) => (
               <HistoryCard
                 key={item.id}
                 item={item}
                 onPress={() => handleViewResult(item)}
-                onDelete={() => deleteFromHistory(item.id)}
+                onDelete={() => {}}
               />
             ))}
-            {history.length > 5 && (
-              <TouchableOpacity style={styles.viewMore} activeOpacity={0.7}>
-                <Text style={styles.viewMoreText}>전체 {history.length}건 보기</Text>
-                <Feather name="chevron-right" size={14} color={Colors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {/* 빈 상태 */}
-        {history.length === 0 && (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Feather name="bar-chart-2" size={32} color={Colors.textTertiary} />
-            </View>
-            <Text style={styles.emptyTitle}>분석 기록이 없습니다</Text>
-            <Text style={styles.emptySubtitle}>
-              위의 버튼을 눌러 뉴스 링크, 스크린샷, 또는 유튜브 영상을 분석해보세요.
-            </Text>
           </View>
         )}
       </ScrollView>
+
+      {/* 분석 시작하기 FAB */}
+      <View style={[styles.fabContainer, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={styles.fab}
+          activeOpacity={0.85}
+          onPress={() => router.push('/analyze-sheet')}
+        >
+          <Feather name="zap" size={18} color="#fff" />
+          <Text style={styles.fabText}>분석 시작하기</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  logoIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  appTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, color: Colors.text, letterSpacing: -0.5 },
-  tagline: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, marginLeft: 46 },
-  historyIcon: {
-    width: 40, height: 40, borderRadius: 12,
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  logo: { width: 100, height: 32 },
+  bellBtn: {
+    width: 38, height: 38, borderRadius: 12,
     backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  heroBanner: { borderRadius: 20, padding: 20, marginBottom: 28 },
-  heroBannerContent: { marginBottom: 16 },
-  heroTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff', marginBottom: 8, letterSpacing: -0.3, lineHeight: 24 },
-  heroSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 19 },
-  heroStats: { flexDirection: 'row', gap: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' },
-  heroStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroStatLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)' },
-  section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text, marginBottom: 14 },
-  sectionBadge: {
-    backgroundColor: Colors.surface, paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 10, borderWidth: 1, borderColor: Colors.border, marginBottom: 14,
+
+  scroll: { paddingHorizontal: 16, paddingTop: 20 },
+
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14,
   },
-  sectionCount: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: Colors.textSecondary },
-  disclaimer: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 24 },
-  disclaimerText: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
-  viewMore: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: Colors.border,
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: Colors.text },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.positive },
+  liveText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: Colors.positive },
+  badge: {
+    backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: 10, marginLeft: 2,
   },
-  viewMoreText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.primary },
-  emptyState: { alignItems: 'center', paddingVertical: 32, gap: 10 },
-  emptyIcon: {
-    width: 64, height: 64, borderRadius: 20,
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
+
+  feedCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16, padding: 16,
+    marginBottom: 10,
+    borderWidth: 1, borderColor: Colors.border,
   },
-  emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
-  emptySubtitle: {
-    fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary,
-    textAlign: 'center', lineHeight: 19, paddingHorizontal: 20,
+  feedTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sourceIcon: { fontSize: 13 },
+  sourceName: { fontFamily: 'Inter_500Medium', fontSize: 12, color: Colors.textSecondary },
+  feedTime: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
+  sentimentDot: { width: 8, height: 8, borderRadius: 4 },
+
+  feedTitle: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text,
+    lineHeight: 21, marginBottom: 10,
   },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tag: {
+    backgroundColor: Colors.surfaceElevated, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8, borderWidth: 1, borderColor: Colors.border,
+  },
+  tagText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.textSecondary },
+
+  fabContainer: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+  },
+  fab: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: Colors.primary, borderRadius: 18,
+    paddingVertical: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  fabText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff', letterSpacing: 0.2 },
 });
