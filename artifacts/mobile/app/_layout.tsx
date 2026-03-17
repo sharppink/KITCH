@@ -62,8 +62,9 @@ export default function RootLayout() {
     }
   }, []);
 
-  // 공유 URL 처리: 앱이 실행 중일 때
+  // 공유 URL 처리: 앱이 실행 중일 때 (네이티브 전용 — 웹은 딥링크 없음)
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const sub = Linking.addEventListener('url', ({ url }) => {
       if (isYouTubeUrl(url)) {
         router.push({ pathname: '/input', params: { type: 'youtube', sharedUrl: url } });
@@ -74,8 +75,9 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  // 공유 URL 처리: 콜드 스타트 (앱이 꺼져있을 때 공유로 진입)
+  // 공유 URL 처리: 콜드 스타트 (네이티브 전용 — 웹은 현재 주소를 반환해서 오작동)
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     Linking.getInitialURL().then((url) => {
       if (!url) return;
       if (isYouTubeUrl(url)) {
