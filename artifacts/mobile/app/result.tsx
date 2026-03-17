@@ -1,6 +1,7 @@
 // 결과 화면 - AI 분석 결과 표시
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -127,6 +128,25 @@ export default function ResultScreen() {
                 <RiskBadge riskLevel={result.riskLevel} />
               </View>
             </View>
+
+            {/* 원본 보기 버튼 — URL 있을 때만 표시 */}
+            {inputUrl && result.contentType !== 'screenshot' && (
+              <TouchableOpacity
+                style={styles.originalLinkBtn}
+                onPress={() => Linking.openURL(inputUrl)}
+                activeOpacity={0.75}
+              >
+                <Feather
+                  name={result.contentType === 'youtube' ? 'youtube' : 'external-link'}
+                  size={14}
+                  color={Colors.primary}
+                />
+                <Text style={styles.originalLinkText}>
+                  {result.contentType === 'youtube' ? '유튜브에서 원본 영상 보기' : '원본 기사 보기'}
+                </Text>
+                <Feather name="chevron-right" size={13} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
           </Card>
 
           {/* 신뢰도 점수 */}
@@ -317,6 +337,14 @@ const styles = StyleSheet.create({
   sourceTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text, lineHeight: 22 },
   sourceUrl: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
   sourceFooter: { gap: 8 },
+  originalLinkBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  originalLinkText: {
+    flex: 1, fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.primary,
+  },
   analyzedAt: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
   sourceBadges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   credibilityCard: { gap: 12, marginBottom: 4 },
