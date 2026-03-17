@@ -37,14 +37,14 @@ export function HistoryCard({ item, onPress, onDelete }: HistoryCardProps) {
           <Text style={styles.date}>{formatDate(new Date(result.analyzedAt))}</Text>
         </View>
         <Text style={styles.title} numberOfLines={1}>{result.sourceTitle}</Text>
-        <Text style={styles.summary} numberOfLines={2}>{result.summary[0]}</Text>
+        <Text style={styles.summary} numberOfLines={2}>{result.summary?.[0] ?? ''}</Text>
         <View style={styles.footer}>
           <View style={styles.scoreRow}>
-            <Text style={[styles.score, { color: credColor }]}>{result.credibilityScore}</Text>
+            <Text style={[styles.score, { color: credColor }]}>{result.credibilityScore ?? '-'}</Text>
             <Text style={styles.scoreLabel}> 신뢰도</Text>
           </View>
           <View style={styles.stocks}>
-            {result.recommendedStocks.slice(0, 3).map((s) => (
+            {(result.recommendedStocks ?? []).slice(0, 3).map((s) => (
               <StockTagCompact key={s.ticker} stock={s} />
             ))}
           </View>

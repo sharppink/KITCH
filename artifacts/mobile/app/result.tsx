@@ -66,7 +66,7 @@ export default function ResultScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await Share.share({
-        message: `📊 InvestLens 분석 결과 - ${result.sourceTitle}\n\n신뢰도: ${result.credibilityScore}/100\n투자 심리: ${getSentimentLabel(result.sentiment)}\n\n• ${result.summary.join('\n• ')}\n\n관련 종목: ${result.recommendedStocks.map((s) => s.ticker).join(', ')}\n\n⚠️ 본 내용은 투자 권유가 아닙니다.`,
+        message: `📊 InvestLens 분석 결과 - ${result.sourceTitle}\n\n신뢰도: ${result.credibilityScore}/100\n투자 심리: ${getSentimentLabel(result.sentiment)}\n\n• ${(result.summary ?? []).join('\n• ')}\n\n관련 종목: ${(result.recommendedStocks ?? []).map((s) => s.ticker).join(', ')}\n\n⚠️ 본 내용은 투자 권유가 아닙니다.`,
       });
     } catch (e) {
       console.error(e);
@@ -300,7 +300,7 @@ export default function ResultScreen() {
               </LinearGradient>
               <Text style={styles.cardTitle}>AI 핵심 요약</Text>
             </View>
-            {result.summary.map((bullet, i) => (
+            {(result.summary ?? []).map((bullet, i) => (
               <View key={i} style={styles.bulletRow}>
                 <View style={styles.bulletDot}>
                   <Text style={styles.bulletNumber}>{i + 1}</Text>
@@ -338,7 +338,7 @@ export default function ResultScreen() {
             </View>
             <Text style={styles.stocksSubtitle}>해당 콘텐츠에서 언급되거나 연관된 종목입니다</Text>
             <View style={styles.stocksList}>
-              {result.recommendedStocks.map((stock) => (
+              {(result.recommendedStocks ?? []).map((stock) => (
                 <StockTag key={stock.ticker} stock={stock} />
               ))}
             </View>
