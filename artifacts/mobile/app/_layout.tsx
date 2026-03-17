@@ -36,6 +36,13 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  // 웹에서 항상 첫 화면(키움 홈)부터 시작 — URL 히스토리 무시
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      router.replace('/');
+    }
+  }, []);
+
   // 공유 URL 처리: 앱이 실행 중일 때
   useEffect(() => {
     const sub = Linking.addEventListener('url', ({ url }) => {
