@@ -62,6 +62,12 @@ async function buildAll() {
     outfile: path.resolve(distDir, "index.cjs"),
     define: {
       "process.env.NODE_ENV": '"production"',
+      // Replace import.meta.url with a CJS-safe equivalent so createRequire works.
+      "import.meta.url": "__importMetaUrl",
+    },
+    // Define __importMetaUrl at the top of the CJS bundle before any module code runs.
+    banner: {
+      js: `const __importMetaUrl = require("url").pathToFileURL(__filename).href;`,
     },
     minify: true,
     external: externals,

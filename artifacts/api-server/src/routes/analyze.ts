@@ -1,9 +1,18 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import * as cheerio from "cheerio";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const { YoutubeTranscript } = require("youtube-transcript") as { YoutubeTranscript: { fetchTranscript: (id: string, opts?: { lang?: string }) => Promise<{ text: string }[]> } };
+
+// Lazy-load youtube-transcript via dynamic import to use its ESM entry point.
+// The package has "type":"module" but a broken CJS file — ESM import resolves correctly.
+type YTInstance = { fetchTranscript: (id: string, opts?: { lang?: string }) => Promise<{ text: string }[]> };
+let _ytInstance: YTInstance | null = null;
+async function getYoutubeTranscript(): Promise<YTInstance> {
+  if (!_ytInstance) {
+    const mod = await import("youtube-transcript");
+    _ytInstance = (mod.YoutubeTranscript ?? mod.default?.YoutubeTranscript) as YTInstance;
+  }
+  return _ytInstance;
+}
 
 const router = Router();
 
@@ -151,13 +160,13 @@ router.post("/youtube", async (req, res) => {
     let videoTitle = "유튜브 영상";
 
     try {
-      const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
-        lang: "ko",
-      });
+      const yt = await getYoutubeTranscript();
+      const transcript = await yt.fetchTranscript(videoId, { lang: "ko" });
       transcriptText = transcript.map((t) => t.text).join(" ").slice(0, 4000);
     } catch {
       try {
-        const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+        const yt = await getYoutubeTranscript();
+        const transcript = await yt.fetchTranscript(videoId);
         transcriptText = transcript.map((t) => t.text).join(" ").slice(0, 4000);
       } catch {
         transcriptText = "(자막을 불러올 수 없습니다 — 영상 정보만으로 분석)";
