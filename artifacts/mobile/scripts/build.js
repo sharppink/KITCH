@@ -505,6 +505,39 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
   console.log("Manifests updated");
 }
 
+async function buildWebVersion(domain) {
+  console.log("\n=== Building Expo web version for browser access ===");
+  const webDistPath = path.join(projectRoot, "web-dist");
+  if (fs.existsSync(webDistPath)) {
+    fs.rmSync(webDistPath, { recursive: true });
+  }
+
+  return new Promise((resolve, reject) => {
+    const env = {
+      ...process.env,
+      EXPO_PUBLIC_DOMAIN: domain,
+    };
+    const proc = spawn(
+      "pnpm",
+      ["exec", "expo", "export", "--platform", "web", "--output-dir", "web-dist"],
+      { cwd: projectRoot, env, stdio: "inherit" },
+    );
+    proc.on("exit", (code) => {
+      if (code === 0) {
+        console.log("Web build complete → web-dist/");
+        resolve();
+      } else {
+        console.error(`Web build exited with code ${code} — skipping web`);
+        resolve(); // non-fatal: native OTA still works
+      }
+    });
+    proc.on("error", (err) => {
+      console.error("Web build spawn error:", err.message, "— skipping web");
+      resolve(); // non-fatal
+    });
+  });
+}
+
 async function main() {
   console.log("Building static Expo Go deployment...");
 
@@ -560,7 +593,12 @@ async function main() {
 
   if (metroProcess) {
     metroProcess.kill();
+    metroProcess = null;
   }
+
+  // Also build the Expo web version so browsers can access the app directly
+  await buildWebVersion(domain);
+
   process.exit(0);
 }
 

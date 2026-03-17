@@ -1,12 +1,9 @@
 /**
  * Standalone production server for Expo static builds.
  *
- * Serves the output of build.js (static-build/) with two special routes:
- * - GET / or /manifest with expo-platform header → platform manifest JSON
- * - GET / without expo-platform → landing page HTML
- * Everything else falls through to static file serving from ./static-build/.
- *
- * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
+ * - Browser request (no expo-platform header) → serves Expo web build from web-dist/
+ * - expo-platform: ios/android header → serves native OTA manifest from static-build/
+ * - Everything else → static file from web-dist/ or static-build/
  */
 
 const http = require("http");
@@ -14,6 +11,7 @@ const fs = require("fs");
 const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
+const WEB_DIST = path.resolve(__dirname, "..", "web-dist");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
@@ -34,6 +32,14 @@ const MIME_TYPES = {
   ".otf": "font/otf",
   ".map": "application/json",
 };
+
+const hasWebBuild = fs.existsSync(path.join(WEB_DIST, "index.html"));
+
+if (hasWebBuild) {
+  console.log("Web build found at web-dist/ — browser requests will get the web app");
+} else {
+  console.log("No web build found — browser requests will get the QR landing page");
+}
 
 function getAppName() {
   try {
@@ -81,6 +87,29 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   res.end(html);
 }
 
+/** Serve a file from web-dist/. Unknown paths return index.html (SPA fallback). */
+function serveWebApp(urlPath, res) {
+  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
+  const filePath = path.join(WEB_DIST, safePath);
+
+  if (
+    filePath.startsWith(WEB_DIST) &&
+    fs.existsSync(filePath) &&
+    !fs.statSync(filePath).isDirectory()
+  ) {
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || "application/octet-stream";
+    res.writeHead(200, { "content-type": contentType });
+    res.end(fs.readFileSync(filePath));
+    return;
+  }
+
+  // SPA fallback — serve index.html for all unknown paths
+  const indexPath = path.join(WEB_DIST, "index.html");
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(fs.readFileSync(indexPath));
+}
+
 function serveStaticFile(urlPath, res) {
   const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
   const filePath = path.join(STATIC_ROOT, safePath);
@@ -104,7 +133,9 @@ function serveStaticFile(urlPath, res) {
   res.end(content);
 }
 
-const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+const landingPageTemplate = fs.existsSync(TEMPLATE_PATH)
+  ? fs.readFileSync(TEMPLATE_PATH, "utf-8")
+  : "";
 const appName = getAppName();
 
 const server = http.createServer((req, res) => {
@@ -115,15 +146,23 @@ const server = http.createServer((req, res) => {
     pathname = pathname.slice(basePath.length) || "/";
   }
 
-  if (pathname === "/" || pathname === "/manifest") {
-    const platform = req.headers["expo-platform"];
-    if (platform === "ios" || platform === "android") {
+  const platform = req.headers["expo-platform"];
+
+  // Native Expo Go requests → serve OTA manifest/bundles
+  if (platform === "ios" || platform === "android") {
+    if (pathname === "/" || pathname === "/manifest") {
       return serveManifest(platform, res);
     }
+    return serveStaticFile(pathname, res);
+  }
 
-    if (pathname === "/") {
-      return serveLandingPage(req, res, landingPageTemplate, appName);
-    }
+  // Browser requests → serve web app if available, else QR landing page
+  if (hasWebBuild) {
+    return serveWebApp(pathname, res);
+  }
+
+  if (pathname === "/") {
+    return serveLandingPage(req, res, landingPageTemplate, appName);
   }
 
   serveStaticFile(pathname, res);
@@ -131,5 +170,5 @@ const server = http.createServer((req, res) => {
 
 const port = parseInt(process.env.PORT || "3000", 10);
 server.listen(port, "0.0.0.0", () => {
-  console.log(`Serving static Expo build on port ${port}`);
+  console.log(`Serving on port ${port} — web build: ${hasWebBuild ? "YES" : "NO"}`);
 });
