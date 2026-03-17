@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
   ScrollView, StatusBar, StyleSheet, Text,
   TouchableOpacity, View,
@@ -146,18 +147,7 @@ export default function KiwoomHome() {
         </View>
       </ScrollView>
 
-      {/* ── 하단 탭바 ── */}
-      <View style={[styles.tabBar, { paddingBottom: insets.bottom }]}>
-        <TouchableOpacity style={styles.menuBtn} onPress={() => router.push('/kiwoom-menu')}>
-          <Feather name="menu" size={18} color="#FFFFFF" />
-          <Text style={styles.menuBtnText}>메뉴</Text>
-        </TouchableOpacity>
-        {['관심종목', '현재가', '주문', '차트', '계좌', '종합'].map(item => (
-          <TouchableOpacity key={item} style={styles.tabBarItem}>
-            <Text style={styles.tabBarText}>{item}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <KiwoomBottomBar />
     </View>
   );
 }

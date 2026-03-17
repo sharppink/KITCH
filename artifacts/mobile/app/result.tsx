@@ -2,6 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
+import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -99,7 +100,7 @@ export default function ResultScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
@@ -317,6 +318,7 @@ export default function ResultScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      <KiwoomBottomBar />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
+import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
   Image, ScrollView, StatusBar, StyleSheet,
   Text, TouchableOpacity, View,
@@ -48,40 +49,42 @@ export default function KitchHome() {
       </View>
 
       {/* 콘텐츠 */}
-      {history.length === 0 ? (
-        <View style={styles.emptyWrapper}>
-          <View style={styles.emptyIcon}>
-            <Feather name="bar-chart-2" size={32} color={Colors.textTertiary} />
-          </View>
-          <Text style={styles.emptyTitle}>저장된 분석이 없습니다</Text>
-          <Text style={styles.emptySubtitle}>
-            아래 버튼을 눌러 뉴스 링크, 스크린샷,{'\n'}또는 유튜브 영상을 분석해보세요.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
-        >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>내 분석 기록</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{history.length}</Text>
+      <View style={{ flex: 1 }}>
+        {history.length === 0 ? (
+          <View style={styles.emptyWrapper}>
+            <View style={styles.emptyIcon}>
+              <Feather name="bar-chart-2" size={32} color={Colors.textTertiary} />
             </View>
+            <Text style={styles.emptyTitle}>저장된 분석이 없습니다</Text>
+            <Text style={styles.emptySubtitle}>
+              아래 버튼을 눌러 뉴스 링크, 스크린샷,{'\n'}또는 유튜브 영상을 분석해보세요.
+            </Text>
           </View>
-          {history.map((item) => (
-            <HistoryCard
-              key={item.id}
-              item={item}
-              onPress={() => handleViewResult(item)}
-              onDelete={() => deleteFromHistory(item.id)}
-            />
-          ))}
-        </ScrollView>
-      )}
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scroll, { paddingBottom: 80 }]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>내 분석 기록</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{history.length}</Text>
+              </View>
+            </View>
+            {history.map((item) => (
+              <HistoryCard
+                key={item.id}
+                item={item}
+                onPress={() => handleViewResult(item)}
+                onDelete={() => deleteFromHistory(item.id)}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </View>
 
       {/* 분석 시작하기 버튼 */}
-      <View style={[styles.fabContainer, { paddingBottom: insets.bottom + 16 }]}>
+      <View style={styles.fabContainer}>
         <TouchableOpacity
           style={styles.fab}
           activeOpacity={0.85}
@@ -91,6 +94,7 @@ export default function KitchHome() {
           <Text style={styles.fabText}>분석 시작하기</Text>
         </TouchableOpacity>
       </View>
+      <KiwoomBottomBar />
     </View>
   );
 }
@@ -145,7 +149,9 @@ const styles = StyleSheet.create({
   },
 
   fabContainer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16,
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: Colors.background,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
   fab: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

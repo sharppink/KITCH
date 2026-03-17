@@ -1,6 +1,7 @@
 // 입력 화면 - 뉴스 링크, 스크린샷, 유튜브 URL 처리
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -178,7 +179,7 @@ export default function InputScreen() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 120 }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: 20 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -270,7 +271,7 @@ export default function InputScreen() {
       </KeyboardAvoidingView>
 
       {/* 분석 시작 버튼 (하단 고정) */}
-      <View style={[styles.analyzeButtonContainer, { paddingBottom: insets.bottom + 16 }]}>
+      <View style={styles.analyzeButtonContainer}>
         <TouchableOpacity
           style={[styles.analyzeButton, isAnalyzing && styles.analyzeButtonDisabled]}
           onPress={handleAnalyze}
@@ -281,6 +282,7 @@ export default function InputScreen() {
           <Text style={styles.analyzeButtonText}>{config.buttonLabel}</Text>
         </TouchableOpacity>
       </View>
+      <KiwoomBottomBar />
     </View>
   );
 }
@@ -342,7 +344,7 @@ const styles = StyleSheet.create({
   tipText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
   errorContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)', borderRadius: 10, padding: 12 },
   errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.negative, flex: 1 },
-  analyzeButtonContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.border },
+  analyzeButtonContainer: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.border },
   analyzeButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16 },
   analyzeButtonDisabled: { opacity: 0.5 },
   analyzeButtonText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
