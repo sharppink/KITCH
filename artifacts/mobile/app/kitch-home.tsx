@@ -26,7 +26,7 @@ export default function KitchHome() {
 
       {/* 헤더 — 키움 스타일 진한 남색 */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.replace('/')} style={styles.backBtn}>
           <Feather name="chevron-left" size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <Image
