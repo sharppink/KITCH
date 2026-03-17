@@ -1,7 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
   ScrollView, StatusBar, StyleSheet, Text,
   TouchableOpacity, View,
@@ -194,7 +193,18 @@ export default function KiwoomMenu() {
         </View>
       </View>
 
-      <KiwoomBottomBar />
+      {/* ── 하단 탭바 (메뉴 전용: X + 아이콘) ── */}
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom }]}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+          <Feather name="x" size={20} color="#1A1A2E" />
+        </TouchableOpacity>
+        {BOTTOM_TABS.map(tab => (
+          <TouchableOpacity key={tab.label} style={styles.tabBarItem}>
+            <Feather name={tab.icon as any} size={16} color="#64647A" />
+            <Text style={styles.tabBarText}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }

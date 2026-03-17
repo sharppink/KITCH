@@ -162,16 +162,16 @@ export default function InputScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#12146A" />
       <AnalysisLoadingOverlay visible={isAnalyzing} contentType={contentType} />
 
-      {/* 헤더 */}
+      {/* 헤더 — 키움 스타일 진한 남색 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-          <Feather name="arrow-left" size={20} color={Colors.text} />
+          <Feather name="arrow-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Feather name={config.icon} size={16} color={Colors.primary} />
+          <Feather name={config.icon} size={16} color="rgba(255,255,255,0.8)" />
           <Text style={styles.headerTitle}>{config.title}</Text>
         </View>
         <View style={styles.backButton} />
@@ -312,10 +312,10 @@ function getTips(type: ContentType): string[] {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#12146A' },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  headerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
+  headerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#FFFFFF' },
   scroll: { paddingHorizontal: 20, paddingTop: 8 },
   subtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary, marginBottom: 20, lineHeight: 21 },
   imageUploadArea: { borderRadius: 16, borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed', overflow: 'hidden', marginBottom: 20, minHeight: 180, backgroundColor: Colors.surface },

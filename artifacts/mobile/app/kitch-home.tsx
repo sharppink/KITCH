@@ -22,21 +22,21 @@ export default function KitchHome() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#12146A" />
 
-      {/* 헤더 */}
+      {/* 헤더 — 키움 스타일 진한 남색 */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="chevron-left" size={22} color={Colors.text} />
+          <Feather name="chevron-left" size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <Image
           source={require('@/assets/images/kitch-logo-transparent.png')}
           style={styles.logo}
-          tintColor={Colors.primary}
+          tintColor="#FFFFFF"
           resizeMode="contain"
         />
         <TouchableOpacity style={styles.bellBtn}>
-          <Feather name="bell" size={18} color={Colors.textSecondary} />
+          <Feather name="bell" size={18} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
       </View>
 
@@ -105,14 +105,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingBottom: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    backgroundColor: '#12146A',
   },
   backBtn: { marginRight: 4 },
   logo: { flex: 1, height: 36 },
   bellBtn: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: Colors.background,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center', justifyContent: 'center',
   },
 

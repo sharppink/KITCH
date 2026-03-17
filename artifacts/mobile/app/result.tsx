@@ -86,16 +86,16 @@ export default function ResultScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#12146A" />
 
-      {/* 헤더 */}
+      {/* 헤더 — 키움 스타일 진한 남색 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.push('/kitch-home')} style={styles.backButton} activeOpacity={0.7}>
-          <Feather name="arrow-left" size={20} color={Colors.text} />
+          <Feather name="arrow-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>분석 결과</Text>
         <TouchableOpacity onPress={handleShare} style={styles.shareButton} activeOpacity={0.7}>
-          <Feather name="share" size={18} color={Colors.textSecondary} />
+          <Feather name="share" size={18} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>
       </View>
 
@@ -327,10 +327,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loadingContainer: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
-  shareButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#12146A' },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#FFFFFF' },
+  shareButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: 16, gap: 12 },
   sourceCard: { gap: 12, marginBottom: 4 },
   sourceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
