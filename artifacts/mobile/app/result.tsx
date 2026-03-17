@@ -201,19 +201,22 @@ export default function ResultScreen() {
                 <View style={styles.modalDivider} />
 
                 <View style={styles.formulaSection}>
-                  <Text style={styles.formulaTitle}>📐 신뢰도 공식</Text>
+                  <Text style={styles.formulaTitle}>📐 ROC 가중치법</Text>
                   <View style={styles.formulaBox}>
                     <Text style={styles.formulaText}>
-                      신뢰도 = 출처점수(40%) + 구체성점수(35%) + 시장관련성(25%)
+                      신뢰도 = 각 기준별 점수 × ROC 가중치의 합산{'\n'}(기준별 점수: 부정 지표 해당 시 차감, 최솟값 5점)
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.criteriaList}>
                   {[
-                    { icon: '🏛️', label: '출처 신뢰도 (40점)', desc: '주요 언론사·공식 IR·규제기관 자료 여부, 작성자 전문성 등을 반영합니다.' },
-                    { icon: '📊', label: '정보 구체성 (35점)', desc: '수치·날짜·출처 인용 등 검증 가능한 데이터의 밀도를 측정합니다.' },
-                    { icon: '📈', label: '시장 관련성 (25점)', desc: '언급된 종목·지표가 현재 시장 상황과 얼마나 직결되는지 평가합니다.' },
+                    { icon: '🏛️', label: '출처 권위도 (40.8%)', desc: '말하는 사람이 믿을 만한 전문가인가요? 실명·자격·제도권 소속 여부를 봅니다.' },
+                    { icon: '⏱️', label: '시점 유효성 (24.2%)', desc: '지금 바로 써먹을 수 있는 최신 정보인가요? 정보의 신선도와 시세 선반영 여부를 봅니다.' },
+                    { icon: '🧠', label: '논리적 완결성 (15.8%)', desc: '앞뒤 맥락이 맞고 과장이 없나요? 논리 비약·단정적 선동·리스크 외면 여부를 봅니다.' },
+                    { icon: '🔍', label: '이해관계 투명성 (10.3%)', desc: '광고나 홍보 목적을 숨기고 있지 않나요? 리딩방 유도·협찬 미표기 등을 봅니다.' },
+                    { icon: '📊', label: '데이터 구체성 (6.1%)', desc: '추측이 아닌 실제 숫자나 도표가 있나요? 수치·차트·출처 명기 여부를 봅니다.' },
+                    { icon: '🔄', label: '교차 검증 일치도 (2.7%)', desc: '다른 믿을 만한 곳도 같은 말을 하나요? 외부 팩트와의 정합성을 봅니다.' },
                   ].map(item => (
                     <View key={item.label} style={styles.criteriaItem}>
                       <Text style={styles.criteriaIcon}>{item.icon}</Text>
@@ -228,7 +231,7 @@ export default function ResultScreen() {
                 <View style={styles.modalNote}>
                   <Feather name="alert-circle" size={13} color={Colors.textTertiary} />
                   <Text style={styles.modalNoteText}>
-                    해당 지표는 참고용이며 투자 판단의 근거로 단독 활용하지 않도록 권고합니다. 산출 공식은 추후 개선될 수 있습니다.
+                    해당 지표는 참고용이며 투자 판단의 근거로 단독 활용하지 않도록 권고합니다.
                   </Text>
                 </View>
 
