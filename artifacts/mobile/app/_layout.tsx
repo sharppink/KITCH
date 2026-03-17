@@ -22,6 +22,22 @@ if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync();
 }
 
+// 웹: Expo Router / React Navigation이 저장해 둔 이전 화면 상태를 제거
+// → 새로고침·재방문 시 항상 첫 화면(키움 홈)에서 시작
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  try {
+    // React Navigation이 sessionStorage에 저장하는 상태 키
+    sessionStorage.removeItem('REACT_NAVIGATION_STATE_KEY');
+    // Expo Router가 사용할 수 있는 추가 키 패턴도 제거
+    Object.keys(sessionStorage)
+      .filter((k) => k.includes('navigation') || k.includes('router') || k.includes('expo'))
+      .forEach((k) => sessionStorage.removeItem(k));
+    Object.keys(localStorage)
+      .filter((k) => k.includes('navigation') || k.includes('router') || k.includes('expo'))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch (_) {}
+}
+
 const queryClient = new QueryClient();
 
 function isYouTubeUrl(url: string) {
