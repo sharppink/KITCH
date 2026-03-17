@@ -36,10 +36,13 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  // 웹에서 항상 첫 화면(키움 홈)부터 시작 — URL 히스토리 무시
+  // 웹에서 딥링크로 진입 시 첫 화면으로 리셋 (이미 / 이면 스킵)
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      router.replace('/');
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path !== '/' && path !== '') {
+        router.replace('/');
+      }
     }
   }, []);
 
