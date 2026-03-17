@@ -11,12 +11,16 @@ import * as Linking from 'expo-linking';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Colors from '@/constants/colors';
 
-SplashScreen.preventAutoHideAsync();
+// SplashScreen is native-only — skip on web to avoid invisible overlay
+if (Platform.OS !== 'web') {
+  SplashScreen.preventAutoHideAsync();
+}
 
 const queryClient = new QueryClient();
 
@@ -57,12 +61,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && Platform.OS !== 'web') {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  // On web: render immediately (don't block on font loading — avoids blank screen)
+  // On native: wait for fonts to prevent layout flash
+  if (!fontsLoaded && !fontError && Platform.OS !== 'web') return null;
 
   return (
     <SafeAreaProvider>
