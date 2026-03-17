@@ -1,6 +1,6 @@
 // 유틸리티 포매터 - InvestLens 한글 버전
 
-import { Sentiment, RiskLevel } from '@/services/aiAnalysis';
+import { Sentiment } from '@/services/aiAnalysis';
 import Colors from '@/constants/colors';
 
 export function getCredibilityLabel(score: number): string {
@@ -32,21 +32,6 @@ export function getSentimentLabel(sentiment: Sentiment): string {
   }
 }
 
-export function getRiskColor(risk: RiskLevel): string {
-  switch (risk) {
-    case 'low': return Colors.riskLow;
-    case 'medium': return Colors.riskMedium;
-    case 'high': return Colors.riskHigh;
-  }
-}
-
-export function getRiskLabel(risk: RiskLevel): string {
-  switch (risk) {
-    case 'low': return '저위험';
-    case 'medium': return '중위험';
-    case 'high': return '고위험';
-  }
-}
 
 export function formatDate(date: Date): string {
   const now = new Date();

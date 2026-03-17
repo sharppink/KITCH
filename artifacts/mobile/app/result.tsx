@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { Card } from '@/components/Card';
 import { ProgressBar } from '@/components/ProgressBar';
-import { SentimentBadge, RiskBadge } from '@/components/SentimentBadge';
+import { SentimentBadge } from '@/components/SentimentBadge';
 import { StockTag } from '@/components/StockTag';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { AnalysisResult } from '@/services/aiAnalysis';
@@ -42,6 +42,7 @@ export default function ResultScreen() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
   const [showCredInfo, setShowCredInfo] = useState(false);
+  const [showSentimentInfo, setShowSentimentInfo] = useState(false);
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(20)).current;
@@ -126,7 +127,6 @@ export default function ResultScreen() {
               </Text>
               <View style={styles.sourceBadges}>
                 <SentimentBadge sentiment={result.sentiment} />
-                <RiskBadge riskLevel={result.riskLevel} />
               </View>
             </View>
 
@@ -239,6 +239,59 @@ export default function ResultScreen() {
             </Pressable>
           </Modal>
 
+          {/* 투자 심리 기준 모달 */}
+          <Modal
+            visible={showSentimentInfo}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowSentimentInfo(false)}
+          >
+            <Pressable style={styles.modalOverlay} onPress={() => setShowSentimentInfo(false)}>
+              <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalTitleRow}>
+                    <View style={styles.infoBtnLarge}>
+                      <Text style={styles.infoBtnLargeText}>i</Text>
+                    </View>
+                    <Text style={styles.modalTitle}>투자 심리 판단 기준</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowSentimentInfo(false)}>
+                    <Feather name="x" size={18} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalDivider} />
+
+                <View style={styles.criteriaList}>
+                  {[
+                    { icon: '📈', label: '강세 (Positive)', desc: '실적 개선, 수주·계약 체결, 목표주가 상향, 업황 회복, 정책 수혜, 신사업 모멘텀 등 투자에 긍정적인 신호.' },
+                    { icon: '➖', label: '중립 (Neutral)', desc: '단순 사실 전달, 긍정·부정 신호가 혼재되거나 방향성이 불명확한 경우, 현상 유지 의견.' },
+                    { icon: '📉', label: '약세 (Negative)', desc: '실적 부진·적자 전환, 목표주가 하향, 규제 리스크, 경쟁 심화, 대규모 손실·소송 등 투자에 부정적인 신호.' },
+                  ].map(item => (
+                    <View key={item.label} style={styles.criteriaItem}>
+                      <Text style={styles.criteriaIcon}>{item.icon}</Text>
+                      <View style={styles.criteriaText}>
+                        <Text style={styles.criteriaLabel}>{item.label}</Text>
+                        <Text style={styles.criteriaDesc}>{item.desc}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.modalNote}>
+                  <Feather name="alert-circle" size={13} color={Colors.textTertiary} />
+                  <Text style={styles.modalNoteText}>
+                    투자 심리는 콘텐츠 내용을 AI가 종합 판단한 결과이며, 실제 시장 상황과 다를 수 있습니다. 투자 판단의 보조 참고 자료로만 활용하시기 바랍니다.
+                  </Text>
+                </View>
+
+                <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowSentimentInfo(false)}>
+                  <Text style={styles.modalCloseBtnText}>확인</Text>
+                </TouchableOpacity>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
           {/* AI 요약 */}
           <Card style={styles.summaryCard}>
             <View style={styles.cardTitleRow}>
@@ -257,23 +310,23 @@ export default function ResultScreen() {
             ))}
           </Card>
 
-          {/* 심리 & 리스크 */}
-          <View style={styles.row}>
-            <Card style={[styles.metricCard, styles.halfCard]}>
+          {/* 투자 심리 */}
+          <Card style={styles.metricCard}>
+            <View style={styles.metricTitleRow}>
               <Text style={styles.metricLabel}>투자 심리</Text>
-              <SentimentBadge sentiment={result.sentiment} />
-              <Text style={styles.metricDescription}>
-                {result.sentiment === 'positive' ? '강세 신호가 포착됩니다' : result.sentiment === 'negative' ? '약세 신호가 포착됩니다' : '혼재된 신호가 나타납니다'}
-              </Text>
-            </Card>
-            <Card style={[styles.metricCard, styles.halfCard]}>
-              <Text style={styles.metricLabel}>리스크 수준</Text>
-              <RiskBadge riskLevel={result.riskLevel} />
-              <Text style={styles.metricDescription}>
-                {result.riskLevel === 'low' ? '보수적, 변동성 낮음' : result.riskLevel === 'medium' ? '중간 수준의 리스크' : '고변동성, 주의 필요'}
-              </Text>
-            </Card>
-          </View>
+              <TouchableOpacity
+                onPress={() => setShowSentimentInfo(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.infoBtn}
+              >
+                <Text style={styles.infoBtnText}>i</Text>
+              </TouchableOpacity>
+            </View>
+            <SentimentBadge sentiment={result.sentiment} />
+            <Text style={styles.metricDescription}>
+              {result.sentiment === 'positive' ? '강세 신호가 포착됩니다' : result.sentiment === 'negative' ? '약세 신호가 포착됩니다' : '혼재된 신호가 나타납니다'}
+            </Text>
+          </Card>
 
           {/* 관련 종목 */}
           <Card style={styles.stocksCard}>
@@ -373,6 +426,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10, marginBottom: 4 },
   metricCard: { gap: 8, marginBottom: 0 },
   halfCard: { flex: 1 },
+  metricTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metricLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
   metricDescription: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, lineHeight: 16, marginTop: 4 },
   stocksCard: { gap: 12, marginBottom: 4 },

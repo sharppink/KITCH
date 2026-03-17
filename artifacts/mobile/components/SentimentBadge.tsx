@@ -1,9 +1,9 @@
-// 심리 및 리스크 레벨 배지 컴포넌트
+// 심리 배지 컴포넌트
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Sentiment, RiskLevel } from '@/services/aiAnalysis';
-import { getSentimentColor, getSentimentLabel, getRiskColor, getRiskLabel } from '@/utils/formatters';
+import { Sentiment } from '@/services/aiAnalysis';
+import { getSentimentColor, getSentimentLabel } from '@/utils/formatters';
 
 interface SentimentBadgeProps {
   sentiment: Sentiment;
@@ -28,28 +28,6 @@ export function SentimentBadge({ sentiment }: SentimentBadgeProps) {
   );
 }
 
-interface RiskBadgeProps {
-  riskLevel: RiskLevel;
-}
-
-const riskIcons: Record<RiskLevel, keyof typeof Feather.glyphMap> = {
-  low: 'shield',
-  medium: 'alert-triangle',
-  high: 'alert-octagon',
-};
-
-export function RiskBadge({ riskLevel }: RiskBadgeProps) {
-  const color = getRiskColor(riskLevel);
-  const label = getRiskLabel(riskLevel);
-  const icon = riskIcons[riskLevel];
-
-  return (
-    <View style={[styles.badge, { backgroundColor: `${color}20`, borderColor: `${color}50` }]}>
-      <Feather name={icon} size={14} color={color} />
-      <Text style={[styles.label, { color }]}>{label}</Text>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   badge: {

@@ -1,7 +1,6 @@
 // AI 분석 서비스 - 실제 OpenAI 연동 (API 서버 경유)
 
 export type Sentiment = 'positive' | 'neutral' | 'negative';
-export type RiskLevel = 'low' | 'medium' | 'high';
 export type ContentType = 'news' | 'screenshot' | 'youtube';
 
 export interface StockRecommendation {
@@ -15,7 +14,6 @@ export interface AnalysisResult {
   credibilityScore: number;
   sentiment: Sentiment;
   recommendedStocks: StockRecommendation[];
-  riskLevel: RiskLevel;
   contentType: ContentType;
   sourceTitle: string;
   analyzedAt: Date;
