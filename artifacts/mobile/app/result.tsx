@@ -360,7 +360,7 @@ export default function ResultScreen() {
           <View style={styles.disclaimerBox}>
             <Feather name="alert-triangle" size={13} color={Colors.warning} />
             <Text style={styles.disclaimerText}>
-              본 분석은 AI가 생성한 교육 목적의 정보입니다. 투자 권유가 아니며, 실제 투자 결정 전에는 반드시 자체적인 조사와 전문가 상담을 진행하시기 바랍니다.
+              본 분석은 참고용 정보이며, 투자 판단의 최종 책임은 사용자에게 있습니다.
             </Text>
           </View>
 
