@@ -6,6 +6,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Animated,
+  Modal,
+  Pressable,
   ScrollView,
   Share,
   StatusBar,
@@ -37,6 +39,7 @@ export default function ResultScreen() {
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
+  const [showCredInfo, setShowCredInfo] = useState(false);
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(20)).current;
@@ -129,7 +132,16 @@ export default function ResultScreen() {
           {/* 신뢰도 점수 */}
           <Card style={styles.credibilityCard} elevated>
             <View style={styles.credHeader}>
-              <Text style={styles.cardTitle}>신뢰도 점수</Text>
+              <View style={styles.credTitleRow}>
+                <Text style={styles.cardTitle}>신뢰도 점수</Text>
+                <TouchableOpacity
+                  style={styles.infoBtn}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowCredInfo(true); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.infoBtnText}>i</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={[styles.credScore, { color: credColor }]}>
                 {result.credibilityScore}
                 <Text style={styles.credScoreMax}>/100</Text>
@@ -143,6 +155,68 @@ export default function ResultScreen() {
               <Text style={styles.credHint}>출처 품질 및 내용 분석 기반</Text>
             </View>
           </Card>
+
+          {/* 신뢰도 설명 모달 */}
+          <Modal
+            visible={showCredInfo}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowCredInfo(false)}
+          >
+            <Pressable style={styles.modalOverlay} onPress={() => setShowCredInfo(false)}>
+              <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalTitleRow}>
+                    <View style={styles.infoBtnLarge}>
+                      <Text style={styles.infoBtnLargeText}>i</Text>
+                    </View>
+                    <Text style={styles.modalTitle}>신뢰도 점수 산출 방식</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowCredInfo(false)}>
+                    <Feather name="x" size={18} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalDivider} />
+
+                <View style={styles.formulaSection}>
+                  <Text style={styles.formulaTitle}>📐 신뢰도 공식</Text>
+                  <View style={styles.formulaBox}>
+                    <Text style={styles.formulaText}>
+                      신뢰도 = 출처점수(40%) + 구체성점수(35%) + 시장관련성(25%)
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.criteriaList}>
+                  {[
+                    { icon: '🏛️', label: '출처 신뢰도 (40점)', desc: '주요 언론사·공식 IR·규제기관 자료 여부, 작성자 전문성 등을 반영합니다.' },
+                    { icon: '📊', label: '정보 구체성 (35점)', desc: '수치·날짜·출처 인용 등 검증 가능한 데이터의 밀도를 측정합니다.' },
+                    { icon: '📈', label: '시장 관련성 (25점)', desc: '언급된 종목·지표가 현재 시장 상황과 얼마나 직결되는지 평가합니다.' },
+                  ].map(item => (
+                    <View key={item.label} style={styles.criteriaItem}>
+                      <Text style={styles.criteriaIcon}>{item.icon}</Text>
+                      <View style={styles.criteriaText}>
+                        <Text style={styles.criteriaLabel}>{item.label}</Text>
+                        <Text style={styles.criteriaDesc}>{item.desc}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.modalNote}>
+                  <Feather name="alert-circle" size={13} color={Colors.textTertiary} />
+                  <Text style={styles.modalNoteText}>
+                    해당 지표는 참고용이며 투자 판단의 근거로 단독 활용하지 않도록 권고합니다. 산출 공식은 추후 개선될 수 있습니다.
+                  </Text>
+                </View>
+
+                <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowCredInfo(false)}>
+                  <Text style={styles.modalCloseBtnText}>확인</Text>
+                </TouchableOpacity>
+              </Pressable>
+            </Pressable>
+          </Modal>
 
           {/* AI 요약 */}
           <Card style={styles.summaryCard}>
@@ -247,6 +321,12 @@ const styles = StyleSheet.create({
   sourceBadges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   credibilityCard: { gap: 12, marginBottom: 4 },
   credHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  credTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoBtn: {
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  infoBtnText: { fontSize: 10, color: '#fff', fontWeight: '800', fontStyle: 'italic' },
   cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, color: Colors.text },
   credScore: { fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: -1 },
   credScoreMax: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
@@ -276,4 +356,48 @@ const styles = StyleSheet.create({
   disclaimerText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
   analyzeAnotherButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, borderWidth: 1, borderColor: Colors.primary, paddingVertical: 14, marginBottom: 4 },
   analyzeAnotherText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.primary },
+
+  /* 신뢰도 설명 모달 */
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20,
+  },
+  modalBox: {
+    width: '100%', backgroundColor: Colors.surface,
+    borderRadius: 20, padding: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15, shadowRadius: 24, elevation: 12,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoBtnLarge: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  infoBtnLargeText: { fontSize: 13, color: '#fff', fontWeight: '800', fontStyle: 'italic' },
+  modalTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: Colors.text },
+  modalDivider: { height: 1, backgroundColor: Colors.border, marginBottom: 16 },
+  formulaSection: { marginBottom: 16 },
+  formulaTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.text, marginBottom: 8 },
+  formulaBox: {
+    backgroundColor: Colors.primaryBg, borderRadius: 10,
+    padding: 12, borderLeftWidth: 3, borderLeftColor: Colors.primary,
+  },
+  formulaText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: Colors.primary, lineHeight: 18 },
+  criteriaList: { gap: 12, marginBottom: 16 },
+  criteriaItem: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  criteriaIcon: { fontSize: 16, marginTop: 1 },
+  criteriaText: { flex: 1, gap: 2 },
+  criteriaLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.text },
+  criteriaDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  modalNote: {
+    flexDirection: 'row', gap: 6, alignItems: 'flex-start',
+    backgroundColor: '#FFF9EC', borderRadius: 8, padding: 10, marginBottom: 16,
+  },
+  modalNoteText: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
+  modalCloseBtn: {
+    backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 13,
+    alignItems: 'center',
+  },
+  modalCloseBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#fff' },
 });
