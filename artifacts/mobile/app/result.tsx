@@ -83,6 +83,7 @@ export default function ResultScreen() {
     );
   }
 
+  const cannotAnalyze = result.cannotAnalyze === true;
   const credColor = getCredibilityColor(result.credibilityScore);
 
   return (
@@ -152,29 +153,41 @@ export default function ResultScreen() {
 
           {/* 신뢰도 점수 */}
           <Card style={styles.credibilityCard} elevated>
-            <View style={styles.credHeader}>
-              <View style={styles.credTitleRow}>
-                <Text style={styles.cardTitle}>신뢰도 점수</Text>
-                <TouchableOpacity
-                  style={styles.infoBtn}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowCredInfo(true); }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.infoBtnText}>i</Text>
-                </TouchableOpacity>
+            {cannotAnalyze ? (
+              <View style={styles.cannotAnalyzeBox}>
+                <Feather name="alert-circle" size={28} color="#888" style={{ marginBottom: 8 }} />
+                <Text style={styles.cannotAnalyzeTitle}>분석 불가</Text>
+                <Text style={styles.cannotAnalyzeDesc}>
+                  자막·설명을 가져올 수 없어{'\n'}신뢰도를 산출하지 못했습니다.
+                </Text>
               </View>
-              <Text style={[styles.credScore, { color: credColor }]}>
-                {result.credibilityScore}
-                <Text style={styles.credScoreMax}>/100</Text>
-              </Text>
-            </View>
-            <ProgressBar value={result.credibilityScore} height={10} />
-            <View style={styles.credFooter}>
-              <Text style={[styles.credLabel, { color: credColor }]}>
-                {getCredibilityLabel(result.credibilityScore)}
-              </Text>
-              <Text style={styles.credHint}>출처 품질 및 내용 분석 기반</Text>
-            </View>
+            ) : (
+              <>
+                <View style={styles.credHeader}>
+                  <View style={styles.credTitleRow}>
+                    <Text style={styles.cardTitle}>신뢰도 점수</Text>
+                    <TouchableOpacity
+                      style={styles.infoBtn}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowCredInfo(true); }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.infoBtnText}>i</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.credScore, { color: credColor }]}>
+                    {result.credibilityScore}
+                    <Text style={styles.credScoreMax}>/100</Text>
+                  </Text>
+                </View>
+                <ProgressBar value={result.credibilityScore} height={10} />
+                <View style={styles.credFooter}>
+                  <Text style={[styles.credLabel, { color: credColor }]}>
+                    {getCredibilityLabel(result.credibilityScore)}
+                  </Text>
+                  <Text style={styles.credHint}>출처 품질 및 내용 분석 기반</Text>
+                </View>
+              </>
+            )}
           </Card>
 
           {/* 신뢰도 설명 모달 */}
@@ -303,7 +316,9 @@ export default function ResultScreen() {
               </LinearGradient>
               <Text style={styles.cardTitle}>AI 핵심 요약</Text>
             </View>
-            {(result.summary ?? []).map((bullet, i) => (
+            {cannotAnalyze ? (
+              <Text style={styles.cannotAnalyzeDesc}>영상 내용을 불러올 수 없어 요약을 제공할 수 없습니다. 자막이 비활성화된 영상이거나 접근이 제한된 영상일 수 있습니다.</Text>
+            ) : (result.summary ?? []).map((bullet, i) => (
               <View key={i} style={styles.bulletRow}>
                 <View style={styles.bulletDot}>
                   <Text style={styles.bulletNumber}>{i + 1}</Text>
@@ -314,6 +329,7 @@ export default function ResultScreen() {
           </Card>
 
           {/* 투자 심리 */}
+          {!cannotAnalyze && (
           <Card style={styles.metricCard}>
             <View style={styles.metricTitleRow}>
               <Text style={styles.metricLabel}>투자 심리</Text>
@@ -330,8 +346,10 @@ export default function ResultScreen() {
               {result.sentiment === 'positive' ? '강세 신호가 포착됩니다' : result.sentiment === 'negative' ? '약세 신호가 포착됩니다' : '혼재된 신호가 나타납니다'}
             </Text>
           </Card>
+          )}
 
           {/* 관련 종목 */}
+          {!cannotAnalyze && (
           <Card style={styles.stocksCard}>
             <View style={styles.cardTitleRow}>
               <LinearGradient colors={['#16A34A', '#22C55E']} style={styles.cardTitleIcon}>
@@ -358,6 +376,7 @@ export default function ResultScreen() {
               ))}
             </View>
           </Card>
+          )}
 
           {/* 투자 주의 문구 */}
           <View style={styles.disclaimerBox}>
@@ -406,6 +425,9 @@ const styles = StyleSheet.create({
   analyzedAt: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
   sourceBadges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   credibilityCard: { gap: 12, marginBottom: 4 },
+  cannotAnalyzeBox: { alignItems: 'center', paddingVertical: 16 },
+  cannotAnalyzeTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#555', marginBottom: 6 },
+  cannotAnalyzeDesc: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   credHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   credTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   infoBtn: {

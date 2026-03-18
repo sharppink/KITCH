@@ -392,13 +392,26 @@ router.post("/youtube", async (req, res) => {
     let channelName = "";
     let videoDescription = "";
 
-    // 1. ytdl-core로 영상 정보 + 자막 URL 동시에 가져오기
-    const ytDlpInfo = await fetchYouTubeInfoViaYtdl(videoId);
-    videoTitle = ytDlpInfo.title;
-    channelName = ytDlpInfo.channelName;
-    videoDescription = ytDlpInfo.description;
+    // 1. ytdl-core로 영상 정보 + 자막 시도
+    const ytdlInfo = await fetchYouTubeInfoViaYtdl(videoId);
+    videoTitle = ytdlInfo.title;
+    channelName = ytdlInfo.channelName;
+    videoDescription = ytdlInfo.description;
 
-    // 2. youtube-transcript 라이브러리로 수동 자막 시도 (한국어 → 전 언어 순)
+    // 2. ytdl-core 실패 시 oEmbed로 제목/채널 보완 (배포 환경에서도 항상 작동)
+    if (videoTitle === "유튜브 영상") {
+      try {
+        const oembedRes = await fetch(
+          `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        const oembed = await oembedRes.json() as { title?: string; author_name?: string };
+        videoTitle = oembed.title || videoTitle;
+        channelName = channelName || oembed.author_name || "";
+      } catch {}
+    }
+
+    // 3. youtube-transcript 라이브러리로 수동 자막 시도 (한국어 → 전 언어 순)
     try {
       const yt = await getYoutubeTranscript();
       const transcript = await yt.fetchTranscript(videoId, { lang: "ko" });
@@ -411,19 +424,29 @@ router.post("/youtube", async (req, res) => {
       } catch {}
     }
 
-    // 3. 수동 자막 없으면 yt-dlp 자동 생성 자막 사용
-    if (transcriptText.length < 50 && ytDlpInfo.autoSubtitle.length > 50) {
-      transcriptText = ytDlpInfo.autoSubtitle;
+    // 4. ytdl-core 자동자막 사용
+    if (transcriptText.length < 50 && ytdlInfo.autoSubtitle.length > 50) {
+      transcriptText = ytdlInfo.autoSubtitle;
     }
 
-    // 4. 분석에 사용할 콘텐츠 조합
-    //    우선순위: 자막 > 자동자막 > 영상 설명 > 제목만
+    // 5. 분석할 콘텐츠가 전혀 없으면 → 분석 불가 즉시 반환 (GPT 호출 안 함)
+    const hasContent = transcriptText.length > 50 || videoDescription.length > 50;
+    if (!hasContent) {
+      res.json({
+        contentType: "youtube",
+        cannotAnalyze: true,
+        sourceTitle: videoTitle,
+        channelName,
+        analyzedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // 6. 분석에 사용할 콘텐츠 조합: 자막 > 자동자막 > 영상 설명
     const hasTranscript = transcriptText.length > 50;
     const contentForAnalysis = hasTranscript
       ? `[자막/자동자막]\n${transcriptText}${videoDescription ? `\n\n[영상 설명]\n${videoDescription}` : ""}`
-      : videoDescription.length > 50
-        ? `[자막 없음 — 영상 설명으로 분석]\n${videoDescription}`
-        : "(자막 및 영상 설명 모두 없음 — 제목과 URL만으로 분석)";
+      : `[자막 없음 — 영상 설명으로 분석]\n${videoDescription}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
