@@ -1,15 +1,7 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import * as cheerio from "cheerio";
-import { execFile } from "child_process";
-import { promisify } from "util";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const execFileAsync = promisify(execFile);
-const _dirname = path.dirname(fileURLToPath(import.meta.url));
-const YT_DLP_PATH = path.resolve(_dirname, "../../yt-dlp");
-const NODE_PATH = process.execPath;
+import ytdl from "@distube/ytdl-core";
 
 // Lazy-load youtube-transcript via dynamic import to use its ESM entry point.
 // The package has "type":"module" but a broken CJS file — ESM import resolves correctly.
@@ -328,8 +320,8 @@ router.post("/news", async (req, res) => {
   }
 });
 
-// yt-dlp로 YouTube 영상 정보(제목·설명·채널) + 자동생성 자막 추출
-async function fetchYouTubeInfoViaYtDlp(videoId: string): Promise<{
+// ytdl-core로 YouTube 영상 정보(제목·설명·채널) + 자막 URL 추출
+async function fetchYouTubeInfoViaYtdl(videoId: string): Promise<{
   title: string;
   description: string;
   channelName: string;
@@ -337,57 +329,45 @@ async function fetchYouTubeInfoViaYtDlp(videoId: string): Promise<{
 }> {
   const result = { title: "유튜브 영상", description: "", channelName: "", autoSubtitle: "" };
 
-  // 1. --dump-json으로 영상 메타데이터 가져오기
   try {
-    const { stdout } = await execFileAsync(
-      YT_DLP_PATH,
-      [
-        "--dump-json",
-        "--no-playlist",
-        `--js-runtimes`, `node:${NODE_PATH}`,
-        "--quiet",
-        `https://www.youtube.com/watch?v=${videoId}`,
-      ],
-      { timeout: 20000 }
-    );
-    const data = JSON.parse(stdout);
-    result.title = data.title || result.title;
-    result.channelName = data.uploader || data.channel || "";
-    result.description = (data.description || "").slice(0, 3000);
+    const info = await ytdl.getBasicInfo(`https://www.youtube.com/watch?v=${videoId}`);
+    const vd = info.videoDetails;
 
-    // 2. 자동 생성 자막이 있으면 가져오기 (subtitle URL에서 직접)
-    const autoSubs = data.automatic_captions;
-    const manualSubs = data.subtitles;
-    const subLangs = ["ko", "en"];
+    result.title = vd.title || result.title;
+    result.channelName = (vd.author as any)?.name || "";
+    result.description = (vd.description || "").slice(0, 3000);
 
-    for (const lang of subLangs) {
-      const subList = (autoSubs?.[lang] || autoSubs?.[`${lang}-KR`] ||
-                       manualSubs?.[lang] || manualSubs?.[`${lang}-KR`]) as any[] | undefined;
-      if (subList && subList.length > 0) {
-        // json3 또는 vtt 형식 우선
-        const jsonSub = subList.find((s: any) => s.ext === "json3") || subList[0];
-        if (jsonSub?.url) {
-          try {
-            const subRes = await fetch(jsonSub.url, { signal: AbortSignal.timeout(10000) });
-            const subData = await subRes.json() as any;
-            // json3 형식: events[].segs[].utf8
-            if (subData?.events) {
-              const text = subData.events
-                .flatMap((e: any) => (e.segs || []).map((s: any) => s.utf8 || ""))
-                .join(" ")
-                .replace(/\s+/g, " ")
-                .trim()
-                .slice(0, 4000);
-              if (text.length > 50) {
-                result.autoSubtitle = text;
-                break;
-              }
-            }
-          } catch {}
+    // 자막 URL 추출 (playerResponse.captions에서)
+    const captionTracks: any[] =
+      (info as any).player_response?.captions
+        ?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+
+    // 한국어 자막 우선, 없으면 첫 번째 트랙
+    const track =
+      captionTracks.find((t: any) => t.languageCode?.startsWith("ko")) ||
+      captionTracks[0];
+
+    if (track?.baseUrl) {
+      try {
+        // fmt=json3으로 받으면 JSON 형식으로 옴
+        const subRes = await fetch(track.baseUrl + "&fmt=json3", {
+          signal: AbortSignal.timeout(8000),
+        });
+        const subData = await subRes.json() as any;
+        if (subData?.events) {
+          const text = subData.events
+            .flatMap((e: any) => (e.segs || []).map((s: any) => s.utf8 || ""))
+            .join(" ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 4000);
+          if (text.length > 50) result.autoSubtitle = text;
         }
-      }
+      } catch {}
     }
-  } catch {}
+  } catch (e: any) {
+    console.error("ytdl-core 오류:", e.message?.slice(0, 100));
+  }
 
   return result;
 }
@@ -412,10 +392,8 @@ router.post("/youtube", async (req, res) => {
     let channelName = "";
     let videoDescription = "";
 
-    // 1. yt-dlp로 영상 정보 + 자동생성 자막 동시에 가져오기
-    const [ytDlpInfo] = await Promise.all([
-      fetchYouTubeInfoViaYtDlp(videoId),
-    ]);
+    // 1. ytdl-core로 영상 정보 + 자막 URL 동시에 가져오기
+    const ytDlpInfo = await fetchYouTubeInfoViaYtdl(videoId);
     videoTitle = ytDlpInfo.title;
     channelName = ytDlpInfo.channelName;
     videoDescription = ytDlpInfo.description;
