@@ -192,6 +192,42 @@ function extractNaverBlogText($: ReturnType<typeof cheerio.load>): string {
   return "";
 }
 
+// MSN 기사 ID 추출 및 내부 API로 본문 가져오기
+function extractMsnArticleId(url: string): string | null {
+  // ar-XXXXXXX 패턴만 뽑음 (URL 경로 어디에 있든)
+  const m = url.match(/\/ar-([A-Za-z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchMsnArticle(url: string): Promise<{ title: string; text: string } | null> {
+  const articleId = extractMsnArticleId(url);
+  if (!articleId) return null;
+
+  // locale 추출 (ko-kr, en-us 등)
+  const localeMatch = url.match(/msn\.com\/([a-z]{2}-[a-z]{2})\//);
+  const locale = localeMatch ? localeMatch[1] : "ko-kr";
+
+  try {
+    const apiUrl = `https://assets.msn.com/content/view/v2/Detail/${locale}/${articleId}`;
+    const res = await fetch(apiUrl, {
+      headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await res.json() as any;
+
+    const title: string = data.title || "";
+    const bodyHtml: string = data.body || data.text || "";
+
+    // HTML 태그 제거해서 텍스트만 추출
+    const $ = cheerio.load(bodyHtml);
+    const text = $("body").text().replace(/\s+/g, " ").trim().slice(0, 4000);
+
+    return { title, text };
+  } catch {
+    return null;
+  }
+}
+
 // POST /api/analyze/news
 router.post("/news", async (req, res) => {
   const { url } = req.body as { url?: string };
@@ -202,10 +238,18 @@ router.post("/news", async (req, res) => {
 
   try {
     const isNaverBlog = /blog\.naver\.com/.test(url);
+    const isMsn = /msn\.com/.test(url);
     let html = "";
     let extractedText = "";
 
-    if (isNaverBlog) {
+    if (isMsn) {
+      // MSN: 내부 API로 본문 직접 추출
+      const msnData = await fetchMsnArticle(url);
+      if (msnData) {
+        extractedText = msnData.text;
+        html = `<html><head><title>${msnData.title}</title></head><body></body></html>`;
+      }
+    } else if (isNaverBlog) {
       // 1차: 모바일 URL 시도
       try {
         const mobileUrl = naverBlogMobileUrl(url);
