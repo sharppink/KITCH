@@ -32,6 +32,7 @@ const openai = new OpenAI({
 const SYSTEM_PROMPT = `당신은 투자 분석 AI입니다. 주어진 콘텐츠를 분석하여 다음 JSON 형식으로 정확히 응답하세요:
 {
   "summary": ["핵심 포인트 1", "핵심 포인트 2", "핵심 포인트 3"],
+  "detailedSummary": "콘텐츠의 핵심 내용을 투자 관점에서 심층 분석한 3~5문단 텍스트. 각 문단은 주요 논점·수치·리스크·기회 요인을 구체적으로 서술. 총 300~600자 한국어.",
   "credibilityScore": 숫자(0-100),
   "sentiment": "positive" | "neutral" | "negative",
   "recommendedStocks": [

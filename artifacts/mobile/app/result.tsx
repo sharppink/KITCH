@@ -43,6 +43,7 @@ export default function ResultScreen() {
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
   const [showCredInfo, setShowCredInfo] = useState(false);
   const [showSentimentInfo, setShowSentimentInfo] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(20)).current;
@@ -311,13 +312,61 @@ export default function ResultScreen() {
             </Pressable>
           </Modal>
 
+          {/* 상세 요약 모달 */}
+          <Modal
+            visible={showDetailModal}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowDetailModal(false)}
+          >
+            <Pressable style={styles.modalOverlay} onPress={() => setShowDetailModal(false)}>
+              <Pressable style={styles.detailModalSheet} onPress={() => {}}>
+                <View style={styles.detailModalHandle} />
+                <View style={styles.detailModalHeader}>
+                  <View style={styles.cardTitleRow}>
+                    <LinearGradient colors={['#2D3A9E', '#4B5FD6']} style={styles.cardTitleIcon}>
+                      <Feather name="cpu" size={13} color="#fff" />
+                    </LinearGradient>
+                    <Text style={styles.cardTitle}>상세 분석</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setShowDetailModal(false)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Feather name="x" size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.detailModalScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.detailModalText}>
+                    {result?.detailedSummary || '상세 분석 내용이 없습니다.'}
+                  </Text>
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
           {/* AI 요약 */}
           <Card style={styles.summaryCard}>
-            <View style={styles.cardTitleRow}>
-              <LinearGradient colors={['#2D3A9E', '#4B5FD6']} style={styles.cardTitleIcon}>
-                <Feather name="cpu" size={13} color="#fff" />
-              </LinearGradient>
-              <Text style={styles.cardTitle}>AI 핵심 요약</Text>
+            <View style={[styles.cardTitleRow, { justifyContent: 'space-between' }]}>
+              <View style={styles.cardTitleRow}>
+                <LinearGradient colors={['#2D3A9E', '#4B5FD6']} style={styles.cardTitleIcon}>
+                  <Feather name="cpu" size={13} color="#fff" />
+                </LinearGradient>
+                <Text style={styles.cardTitle}>AI 핵심 요약</Text>
+              </View>
+              {!cannotAnalyze && result?.detailedSummary ? (
+                <TouchableOpacity
+                  style={styles.detailBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowDetailModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="align-left" size={12} color={Colors.primary} />
+                  <Text style={styles.detailBtnText}>상세보기</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             {cannotAnalyze ? (
               <Text style={styles.cannotAnalyzeDesc}>
@@ -516,4 +565,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCloseBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#fff' },
+
+  /* 상세보기 버튼 */
+  detailBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1, borderColor: Colors.primary,
+    backgroundColor: Colors.primaryBg,
+  },
+  detailBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: Colors.primary },
+
+  /* 상세 요약 바텀시트 */
+  detailModalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, paddingBottom: 36,
+    maxHeight: '75%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12, shadowRadius: 20, elevation: 12,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+  },
+  detailModalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 16,
+  },
+  detailModalHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 16,
+  },
+  detailModalScroll: { flex: 1 },
+  detailModalText: {
+    fontFamily: 'Inter_400Regular', fontSize: 14,
+    color: Colors.text, lineHeight: 24,
+  },
 });

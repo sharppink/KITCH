@@ -11,6 +11,7 @@ export interface StockRecommendation {
 
 export interface AnalysisResult {
   summary: string[];
+  detailedSummary?: string;
   credibilityScore: number;
   sentiment: Sentiment;
   recommendedStocks: StockRecommendation[];
