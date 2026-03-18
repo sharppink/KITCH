@@ -123,6 +123,55 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
+// 네이버 블로그 URL 감지 및 모바일 URL 변환
+function naverBlogMobileUrl(url: string): string | null {
+  const match = url.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
+  if (match) {
+    return `https://m.blog.naver.com/${match[1]}/${match[2]}`;
+  }
+  return null;
+}
+
+// 네이버 블로그 PostView URL (iframe 내용)
+function naverBlogPostViewUrl(url: string): string | null {
+  const match = url.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
+  if (match) {
+    return `https://blog.naver.com/PostView.naver?blogId=${match[1]}&logNo=${match[2]}&redirect=Dlog&widgetTypeCall=true&directAccess=true`;
+  }
+  return null;
+}
+
+async function fetchHtml(fetchUrl: string): Promise<string> {
+  const response = await fetch(fetchUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "ko-KR,ko;q=0.9",
+      "Referer": "https://www.naver.com/",
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  return response.text();
+}
+
+function extractNaverBlogText($: ReturnType<typeof cheerio.load>): string {
+  // 네이버 블로그 전용 셀렉터 (신/구 에디터 모두 대응)
+  const selectors = [
+    ".se-main-container",
+    ".post-content",
+    "#postViewArea",
+    ".se_component_wrap",
+    ".blog_content",
+    "#content",
+    ".entry-content",
+  ];
+  for (const sel of selectors) {
+    const text = $(sel).text().trim();
+    if (text.length > 100) return text;
+  }
+  return "";
+}
+
 // POST /api/analyze/news
 router.post("/news", async (req, res) => {
   const { url } = req.body as { url?: string };
@@ -132,32 +181,56 @@ router.post("/news", async (req, res) => {
   }
 
   try {
-    // 기사 내용 크롤링
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; KITCH-AI/1.0; +https://kitch.app)",
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    const isNaverBlog = /blog\.naver\.com/.test(url);
+    let html = "";
+    let extractedText = "";
 
-    // 불필요한 요소 제거
+    if (isNaverBlog) {
+      // 1차: 모바일 URL 시도
+      try {
+        const mobileUrl = naverBlogMobileUrl(url);
+        if (mobileUrl) {
+          html = await fetchHtml(mobileUrl);
+          const $ = cheerio.load(html);
+          $("script, style, nav, footer, header, aside").remove();
+          extractedText = extractNaverBlogText($);
+        }
+      } catch {}
+
+      // 2차: PostView URL 시도 (iframe 직접 접근)
+      if (!extractedText || extractedText.length < 100) {
+        try {
+          const pvUrl = naverBlogPostViewUrl(url);
+          if (pvUrl) {
+            html = await fetchHtml(pvUrl);
+            const $ = cheerio.load(html);
+            $("script, style, nav, footer, header, aside").remove();
+            extractedText = extractNaverBlogText($);
+            if (!extractedText) extractedText = $("body").text();
+          }
+        } catch {}
+      }
+    } else {
+      html = await fetchHtml(url);
+    }
+
+    const $ = cheerio.load(html);
     $("script, style, nav, footer, header, aside, .ad, .advertisement").remove();
 
     const title = $("title").text().trim() ||
       $("h1").first().text().trim() ||
       "기사";
 
-    // 본문 추출 (article 태그 우선, 없으면 body)
-    const articleText =
-      $("article").text() ||
-      $("main").text() ||
-      $(".article-body, .article-content, .news-content, #articleBody").text() ||
-      $("body").text();
+    // 본문 추출 (네이버 블로그면 이미 추출됨)
+    if (!extractedText) {
+      extractedText =
+        $("article").text() ||
+        $("main").text() ||
+        $(".article-body, .article-content, .news-content, #articleBody").text() ||
+        $("body").text();
+    }
 
-    const cleanText = articleText
+    const cleanText = extractedText
       .replace(/\s+/g, " ")
       .replace(/\n+/g, "\n")
       .trim()
