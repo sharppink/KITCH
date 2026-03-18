@@ -25,6 +25,7 @@ import { extractTextFromImage } from '@/services/ocr';
 import { extractVideoId, fetchVideoInfo, isValidYouTubeUrl } from '@/services/youtube';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { Card } from '@/components/Card';
+import { Toast } from '@/components/Toast';
 
 type ContentType = 'news' | 'screenshot' | 'youtube';
 
@@ -64,14 +65,21 @@ export default function InputScreen() {
   const [inputText, setInputText] = useState(sharedUrl ?? '');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const { saveToHistory } = useAnalysisHistory();
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setToastVisible(false);
+    setTimeout(() => setToastVisible(true), 50);
+  };
 
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError('사진 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.');
+      showToast('사진 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -81,7 +89,6 @@ export default function InputScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       setSelectedImage(result.assets[0].uri);
-      setError(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
@@ -89,29 +96,28 @@ export default function InputScreen() {
   const validate = (): boolean => {
     if (contentType === 'screenshot') {
       if (!selectedImage && !inputText.trim()) {
-        setError('스크린샷을 업로드하거나 텍스트를 입력해주세요.');
+        showToast('스크린샷을 업로드하거나 텍스트를 입력해주세요.');
         return false;
       }
     } else if (contentType === 'youtube') {
       if (!inputText.trim()) {
-        setError('유튜브 URL을 입력해주세요.');
+        showToast('유튜브 URL을 입력해주세요.');
         return false;
       }
       if (!isValidYouTubeUrl(inputText.trim())) {
-        setError('올바른 유튜브 URL을 입력해주세요. (예: https://youtu.be/...)');
+        showToast('올바른 유튜브 URL을 입력해주세요. (예: https://youtu.be/...)');
         return false;
       }
     } else {
       if (!inputText.trim()) {
-        setError('기사 URL을 입력해주세요.');
+        showToast('기사 URL을 입력해주세요.');
         return false;
       }
       if (!inputText.startsWith('http')) {
-        setError('http:// 또는 https://로 시작하는 URL을 입력해주세요.');
+        showToast('http:// 또는 https://로 시작하는 URL을 입력해주세요.');
         return false;
       }
     }
-    setError(null);
     return true;
   };
 
@@ -122,7 +128,6 @@ export default function InputScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setIsAnalyzing(true);
-    setError(null);
 
     try {
       let result;
@@ -153,7 +158,7 @@ export default function InputScreen() {
       router.replace({ pathname: '/result', params: { historyId: historyItem.id, cached: 'true' } });
     } catch (err) {
       console.error('분석 오류:', err);
-      setError('분석에 실패했습니다. 다시 시도해주세요.');
+      showToast((err as Error)?.message || '분석에 실패했습니다. 다시 시도해주세요.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsAnalyzing(false);
@@ -164,6 +169,12 @@ export default function InputScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#12146A" />
       <AnalysisLoadingOverlay visible={isAnalyzing} contentType={contentType} />
+      <Toast
+        visible={toastVisible}
+        message={toastMsg}
+        topOffset={insets.top + 68}
+        onHide={() => setToastVisible(false)}
+      />
 
       {/* 헤더 — 키움 스타일 진한 남색 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
@@ -233,7 +244,7 @@ export default function InputScreen() {
                 ref={inputRef}
                 style={styles.input}
                 value={inputText}
-                onChangeText={(t) => { setInputText(t); if (error) setError(null); }}
+                onChangeText={(t) => { setInputText(t); }}
                 placeholder={config.placeholder}
                 placeholderTextColor={Colors.textTertiary}
                 autoCapitalize="none"
@@ -260,13 +271,6 @@ export default function InputScreen() {
             ))}
           </Card>
 
-          {/* 오류 메시지 */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Feather name="alert-circle" size={14} color={Colors.negative} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
