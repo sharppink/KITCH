@@ -123,21 +123,32 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
-// 네이버 블로그 URL 감지 및 모바일 URL 변환
-function naverBlogMobileUrl(url: string): string | null {
-  const match = url.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
-  if (match) {
-    return `https://m.blog.naver.com/${match[1]}/${match[2]}`;
-  }
+// 네이버 블로그에서 blogId / logNo 추출 (모든 URL 형식 지원)
+function extractNaverBlogIds(url: string): { blogId: string; logNo: string } | null {
+  // 형식 1: blog.naver.com/blogId/logNo 또는 m.blog.naver.com/blogId/logNo
+  const pathMatch = url.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
+  if (pathMatch) return { blogId: pathMatch[1], logNo: pathMatch[2] };
+
+  // 형식 2: PostView.naver?blogId=X&logNo=Y (쿼리파라미터 방식)
+  try {
+    const u = new URL(url);
+    const blogId = u.searchParams.get("blogId");
+    const logNo = u.searchParams.get("logNo");
+    if (blogId && logNo) return { blogId, logNo };
+  } catch {}
+
   return null;
 }
 
-// 네이버 블로그 PostView URL (iframe 내용)
+function naverBlogMobileUrl(url: string): string | null {
+  const ids = extractNaverBlogIds(url);
+  if (ids) return `https://m.blog.naver.com/${ids.blogId}/${ids.logNo}`;
+  return null;
+}
+
 function naverBlogPostViewUrl(url: string): string | null {
-  const match = url.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
-  if (match) {
-    return `https://blog.naver.com/PostView.naver?blogId=${match[1]}&logNo=${match[2]}&redirect=Dlog&widgetTypeCall=true&directAccess=true`;
-  }
+  const ids = extractNaverBlogIds(url);
+  if (ids) return `https://blog.naver.com/PostView.naver?blogId=${ids.blogId}&logNo=${ids.logNo}&redirect=Dlog&widgetTypeCall=true&directAccess=true`;
   return null;
 }
 
