@@ -1,6 +1,15 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import * as cheerio from "cheerio";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const execFileAsync = promisify(execFile);
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
+const YT_DLP_PATH = path.resolve(_dirname, "../../yt-dlp");
+const NODE_PATH = process.execPath;
 
 // Lazy-load youtube-transcript via dynamic import to use its ESM entry point.
 // The package has "type":"module" but a broken CJS file — ESM import resolves correctly.
@@ -275,6 +284,70 @@ router.post("/news", async (req, res) => {
   }
 });
 
+// yt-dlp로 YouTube 영상 정보(제목·설명·채널) + 자동생성 자막 추출
+async function fetchYouTubeInfoViaYtDlp(videoId: string): Promise<{
+  title: string;
+  description: string;
+  channelName: string;
+  autoSubtitle: string;
+}> {
+  const result = { title: "유튜브 영상", description: "", channelName: "", autoSubtitle: "" };
+
+  // 1. --dump-json으로 영상 메타데이터 가져오기
+  try {
+    const { stdout } = await execFileAsync(
+      YT_DLP_PATH,
+      [
+        "--dump-json",
+        "--no-playlist",
+        `--js-runtimes`, `node:${NODE_PATH}`,
+        "--quiet",
+        `https://www.youtube.com/watch?v=${videoId}`,
+      ],
+      { timeout: 20000 }
+    );
+    const data = JSON.parse(stdout);
+    result.title = data.title || result.title;
+    result.channelName = data.uploader || data.channel || "";
+    result.description = (data.description || "").slice(0, 3000);
+
+    // 2. 자동 생성 자막이 있으면 가져오기 (subtitle URL에서 직접)
+    const autoSubs = data.automatic_captions;
+    const manualSubs = data.subtitles;
+    const subLangs = ["ko", "en"];
+
+    for (const lang of subLangs) {
+      const subList = (autoSubs?.[lang] || autoSubs?.[`${lang}-KR`] ||
+                       manualSubs?.[lang] || manualSubs?.[`${lang}-KR`]) as any[] | undefined;
+      if (subList && subList.length > 0) {
+        // json3 또는 vtt 형식 우선
+        const jsonSub = subList.find((s: any) => s.ext === "json3") || subList[0];
+        if (jsonSub?.url) {
+          try {
+            const subRes = await fetch(jsonSub.url, { signal: AbortSignal.timeout(10000) });
+            const subData = await subRes.json() as any;
+            // json3 형식: events[].segs[].utf8
+            if (subData?.events) {
+              const text = subData.events
+                .flatMap((e: any) => (e.segs || []).map((s: any) => s.utf8 || ""))
+                .join(" ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .slice(0, 4000);
+              if (text.length > 50) {
+                result.autoSubtitle = text;
+                break;
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  return result;
+}
+
 // POST /api/analyze/youtube
 router.post("/youtube", async (req, res) => {
   const { url } = req.body as { url?: string };
@@ -290,10 +363,20 @@ router.post("/youtube", async (req, res) => {
   }
 
   try {
-    // 자막 추출 시도
     let transcriptText = "";
     let videoTitle = "유튜브 영상";
+    let channelName = "";
+    let videoDescription = "";
 
+    // 1. yt-dlp로 영상 정보 + 자동생성 자막 동시에 가져오기
+    const [ytDlpInfo] = await Promise.all([
+      fetchYouTubeInfoViaYtDlp(videoId),
+    ]);
+    videoTitle = ytDlpInfo.title;
+    channelName = ytDlpInfo.channelName;
+    videoDescription = ytDlpInfo.description;
+
+    // 2. youtube-transcript 라이브러리로 수동 자막 시도 (한국어 → 전 언어 순)
     try {
       const yt = await getYoutubeTranscript();
       const transcript = await yt.fetchTranscript(videoId, { lang: "ko" });
@@ -303,20 +386,22 @@ router.post("/youtube", async (req, res) => {
         const yt = await getYoutubeTranscript();
         const transcript = await yt.fetchTranscript(videoId);
         transcriptText = transcript.map((t) => t.text).join(" ").slice(0, 4000);
-      } catch {
-        transcriptText = "(자막을 불러올 수 없습니다 — 영상 정보만으로 분석)";
-      }
+      } catch {}
     }
 
-    // YouTube oEmbed로 제목 가져오기
-    try {
-      const oembedRes = await fetch(
-        `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      const oembed = await oembedRes.json() as { title?: string };
-      videoTitle = oembed.title || videoTitle;
-    } catch {}
+    // 3. 수동 자막 없으면 yt-dlp 자동 생성 자막 사용
+    if (transcriptText.length < 50 && ytDlpInfo.autoSubtitle.length > 50) {
+      transcriptText = ytDlpInfo.autoSubtitle;
+    }
+
+    // 4. 분석에 사용할 콘텐츠 조합
+    //    우선순위: 자막 > 자동자막 > 영상 설명 > 제목만
+    const hasTranscript = transcriptText.length > 50;
+    const contentForAnalysis = hasTranscript
+      ? `[자막/자동자막]\n${transcriptText}${videoDescription ? `\n\n[영상 설명]\n${videoDescription}` : ""}`
+      : videoDescription.length > 50
+        ? `[자막 없음 — 영상 설명으로 분석]\n${videoDescription}`
+        : "(자막 및 영상 설명 모두 없음 — 제목과 URL만으로 분석)";
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
@@ -326,7 +411,7 @@ router.post("/youtube", async (req, res) => {
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${videoTitle}\nURL: ${url}\n\n자막:\n${transcriptText}`,
+          content: `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${videoTitle}\n채널: ${channelName || "알 수 없음"}\nURL: ${url}\n\n${contentForAnalysis}`,
         },
       ],
     });
