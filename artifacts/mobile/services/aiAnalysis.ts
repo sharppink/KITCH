@@ -18,6 +18,7 @@ export interface AnalysisResult {
   sourceTitle: string;
   analyzedAt: Date;
   cannotAnalyze?: boolean;
+  geoBlocked?: boolean;
 }
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN

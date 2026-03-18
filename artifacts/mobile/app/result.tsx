@@ -84,6 +84,7 @@ export default function ResultScreen() {
   }
 
   const cannotAnalyze = result.cannotAnalyze === true;
+  const geoBlocked = result.geoBlocked === true;
   const credColor = getCredibilityColor(result.credibilityScore);
 
   return (
@@ -155,10 +156,12 @@ export default function ResultScreen() {
           <Card style={styles.credibilityCard} elevated>
             {cannotAnalyze ? (
               <View style={styles.cannotAnalyzeBox}>
-                <Feather name="alert-circle" size={28} color="#888" style={{ marginBottom: 8 }} />
-                <Text style={styles.cannotAnalyzeTitle}>분석 불가</Text>
+                <Feather name={geoBlocked ? "globe" : "alert-circle"} size={28} color="#888" style={{ marginBottom: 8 }} />
+                <Text style={styles.cannotAnalyzeTitle}>{geoBlocked ? "지역 제한 영상" : "분석 불가"}</Text>
                 <Text style={styles.cannotAnalyzeDesc}>
-                  자막·설명을 가져올 수 없어{'\n'}신뢰도를 산출하지 못했습니다.
+                  {geoBlocked
+                    ? "해당 영상은 한국에서만 시청 가능하여\n서버에서 내용을 가져올 수 없습니다."
+                    : "자막·설명을 가져올 수 없어\n신뢰도를 산출하지 못했습니다."}
                 </Text>
               </View>
             ) : (
@@ -317,7 +320,11 @@ export default function ResultScreen() {
               <Text style={styles.cardTitle}>AI 핵심 요약</Text>
             </View>
             {cannotAnalyze ? (
-              <Text style={styles.cannotAnalyzeDesc}>영상 내용을 불러올 수 없어 요약을 제공할 수 없습니다. 자막이 비활성화된 영상이거나 접근이 제한된 영상일 수 있습니다.</Text>
+              <Text style={styles.cannotAnalyzeDesc}>
+                {geoBlocked
+                  ? "한국 전용 영상으로 분류되어 서버에서 내용에 접근할 수 없습니다. 앱에서 직접 분석하거나 다른 영상을 시도해 주세요."
+                  : "영상 내용을 불러올 수 없어 요약을 제공할 수 없습니다. 자막이 비활성화된 영상이거나 접근이 제한된 영상일 수 있습니다."}
+              </Text>
             ) : (result.summary ?? []).map((bullet, i) => (
               <View key={i} style={styles.bulletRow}>
                 <View style={styles.bulletDot}>

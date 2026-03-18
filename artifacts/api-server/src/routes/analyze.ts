@@ -1,19 +1,6 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import * as cheerio from "cheerio";
-import ytdl from "@distube/ytdl-core";
-
-// Lazy-load youtube-transcript via dynamic import to use its ESM entry point.
-// The package has "type":"module" but a broken CJS file — ESM import resolves correctly.
-type YTInstance = { fetchTranscript: (id: string, opts?: { lang?: string }) => Promise<{ text: string }[]> };
-let _ytInstance: YTInstance | null = null;
-async function getYoutubeTranscript(): Promise<YTInstance> {
-  if (!_ytInstance) {
-    const mod = await import("youtube-transcript");
-    _ytInstance = (mod.YoutubeTranscript ?? mod.default?.YoutubeTranscript) as YTInstance;
-  }
-  return _ytInstance;
-}
 
 const router = Router();
 
@@ -320,36 +307,68 @@ router.post("/news", async (req, res) => {
   }
 });
 
-// ytdl-core로 YouTube 영상 정보(제목·설명·채널) + 자막 URL 추출
-async function fetchYouTubeInfoViaYtdl(videoId: string): Promise<{
+// YouTube InnerTube API로 영상 정보 + 자막 가져오기
+// - ytdl-core, youtube-transcript 대체 (봇 차단 없음, 지역 제한 제외)
+const INNERTUBE_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
+const INNERTUBE_CLIENT = {
+  clientName: "ANDROID",
+  clientVersion: "20.10.38",
+};
+const INNERTUBE_UA = `com.google.android.youtube/${INNERTUBE_CLIENT.clientVersion} (Linux; U; Android 14)`;
+
+async function fetchYouTubeViaInnerTube(videoId: string): Promise<{
   title: string;
   description: string;
   channelName: string;
-  autoSubtitle: string;
+  transcript: string;
+  geoBlocked: boolean;
 }> {
-  const result = { title: "유튜브 영상", description: "", channelName: "", autoSubtitle: "" };
+  const result = { title: "", description: "", channelName: "", transcript: "", geoBlocked: false };
 
   try {
-    const info = await ytdl.getBasicInfo(`https://www.youtube.com/watch?v=${videoId}`);
-    const vd = info.videoDetails;
+    const res = await fetch(INNERTUBE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": INNERTUBE_UA,
+      },
+      body: JSON.stringify({
+        context: { client: INNERTUBE_CLIENT },
+        videoId,
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
 
-    result.title = vd.title || result.title;
-    result.channelName = (vd.author as any)?.name || "";
-    result.description = (vd.description || "").slice(0, 3000);
+    if (!res.ok) return result;
+    const data = await res.json() as any;
 
-    // 자막 URL 추출 (playerResponse.captions에서)
+    const ps = data.playabilityStatus?.status;
+    // 지역 제한 또는 이용 불가
+    if (ps === "ERROR" || ps === "LOGIN_REQUIRED") {
+      if (data.playabilityStatus?.reason?.includes("unavailable") ||
+          data.playabilityStatus?.reason?.includes("country")) {
+        result.geoBlocked = true;
+      }
+      // 제목은 oEmbed로 가져오도록 빈 채로 반환
+      return result;
+    }
+
+    const vd = data.videoDetails || {};
+    result.title = vd.title || "";
+    result.channelName = vd.author || "";
+    result.description = (vd.shortDescription || "").slice(0, 3000);
+
+    // 자막 트랙 가져오기
     const captionTracks: any[] =
-      (info as any).player_response?.captions
-        ?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+      data.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
 
-    // 한국어 자막 우선, 없으면 첫 번째 트랙
     const track =
       captionTracks.find((t: any) => t.languageCode?.startsWith("ko")) ||
+      captionTracks.find((t: any) => !t.kind || t.kind !== "asr") || // 수동 자막 우선
       captionTracks[0];
 
     if (track?.baseUrl) {
       try {
-        // fmt=json3으로 받으면 JSON 형식으로 옴
         const subRes = await fetch(track.baseUrl + "&fmt=json3", {
           signal: AbortSignal.timeout(8000),
         });
@@ -358,15 +377,16 @@ async function fetchYouTubeInfoViaYtdl(videoId: string): Promise<{
           const text = subData.events
             .flatMap((e: any) => (e.segs || []).map((s: any) => s.utf8 || ""))
             .join(" ")
+            .replace(/[\u200B\u200C\u200D\uFEFF]/g, "") // 제로폭 문자 제거
             .replace(/\s+/g, " ")
             .trim()
             .slice(0, 4000);
-          if (text.length > 50) result.autoSubtitle = text;
+          if (text.length > 50) result.transcript = text;
         }
       } catch {}
     }
   } catch (e: any) {
-    console.error("ytdl-core 오류:", e.message?.slice(0, 100));
+    console.error("InnerTube 오류:", e.message?.slice(0, 100));
   }
 
   return result;
@@ -387,62 +407,48 @@ router.post("/youtube", async (req, res) => {
   }
 
   try {
-    let transcriptText = "";
-    let videoTitle = "유튜브 영상";
-    let channelName = "";
-    let videoDescription = "";
+    // 1. InnerTube API로 영상 정보 + 자막 가져오기 (봇 차단 없음)
+    const ytInfo = await fetchYouTubeViaInnerTube(videoId);
 
-    // 1. ytdl-core로 영상 정보 + 자막 시도
-    const ytdlInfo = await fetchYouTubeInfoViaYtdl(videoId);
-    videoTitle = ytdlInfo.title;
-    channelName = ytdlInfo.channelName;
-    videoDescription = ytdlInfo.description;
+    let videoTitle = ytInfo.title;
+    let channelName = ytInfo.channelName;
+    let videoDescription = ytInfo.description;
+    let transcriptText = ytInfo.transcript;
 
-    // 2. ytdl-core 실패 시 oEmbed로 제목/채널 보완 (배포 환경에서도 항상 작동)
-    if (videoTitle === "유튜브 영상") {
+    // 2. 제목·채널이 없으면 oEmbed로 보완 (지역 제한 영상에서도 항상 작동)
+    if (!videoTitle) {
       try {
         const oembedRes = await fetch(
           `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
           { signal: AbortSignal.timeout(5000) }
         );
         const oembed = await oembedRes.json() as { title?: string; author_name?: string };
-        videoTitle = oembed.title || videoTitle;
+        videoTitle = oembed.title || "";
         channelName = channelName || oembed.author_name || "";
       } catch {}
     }
 
-    // 3. youtube-transcript 라이브러리로 수동 자막 시도 (한국어 → 전 언어 순)
-    try {
-      const yt = await getYoutubeTranscript();
-      const transcript = await yt.fetchTranscript(videoId, { lang: "ko" });
-      transcriptText = transcript.map((t) => t.text).join(" ").slice(0, 4000);
-    } catch {
-      try {
-        const yt = await getYoutubeTranscript();
-        const transcript = await yt.fetchTranscript(videoId);
-        transcriptText = transcript.map((t) => t.text).join(" ").slice(0, 4000);
-      } catch {}
-    }
+    const displayTitle = videoTitle || "유튜브 영상";
 
-    // 4. ytdl-core 자동자막 사용
-    if (transcriptText.length < 50 && ytdlInfo.autoSubtitle.length > 50) {
-      transcriptText = ytdlInfo.autoSubtitle;
-    }
-
-    // 5. 분석할 콘텐츠가 전혀 없으면 → 분석 불가 즉시 반환 (GPT 호출 안 함)
+    // 3. 분석할 콘텐츠가 전혀 없으면 → 분석 불가 즉시 반환 (GPT 호출 안 함)
     const hasContent = transcriptText.length > 50 || videoDescription.length > 50;
     if (!hasContent) {
+      const reason = ytInfo.geoBlocked
+        ? "지역 제한으로 서버에서 영상에 접근할 수 없습니다."
+        : "자막 및 영상 설명을 가져올 수 없습니다.";
+      console.log(`[YouTube] 분석 불가 (${videoId}): ${reason}`);
       res.json({
         contentType: "youtube",
         cannotAnalyze: true,
-        sourceTitle: videoTitle,
+        geoBlocked: ytInfo.geoBlocked,
+        sourceTitle: displayTitle,
         channelName,
         analyzedAt: new Date().toISOString(),
       });
       return;
     }
 
-    // 6. 분석에 사용할 콘텐츠 조합: 자막 > 자동자막 > 영상 설명
+    // 4. 분석에 사용할 콘텐츠 조합: 자막 > 영상 설명
     const hasTranscript = transcriptText.length > 50;
     const contentForAnalysis = hasTranscript
       ? `[자막/자동자막]\n${transcriptText}${videoDescription ? `\n\n[영상 설명]\n${videoDescription}` : ""}`
@@ -456,7 +462,7 @@ router.post("/youtube", async (req, res) => {
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${videoTitle}\n채널: ${channelName || "알 수 없음"}\nURL: ${url}\n\n${contentForAnalysis}`,
+          content: `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${displayTitle}\n채널: ${channelName || "알 수 없음"}\nURL: ${url}\n\n${contentForAnalysis}`,
         },
       ],
     });
@@ -467,7 +473,7 @@ router.post("/youtube", async (req, res) => {
     res.json({
       ...parsed,
       contentType: "youtube",
-      sourceTitle: parsed.sourceTitle || videoTitle,
+      sourceTitle: parsed.sourceTitle || displayTitle,
       analyzedAt: new Date().toISOString(),
     });
   } catch (err: any) {
