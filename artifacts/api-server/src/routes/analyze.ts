@@ -166,6 +166,7 @@ router.post("/news", async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       max_completion_tokens: 8192,
+      temperature: 0,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -236,6 +237,7 @@ router.post("/youtube", async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       max_completion_tokens: 8192,
+      temperature: 0,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -272,6 +274,7 @@ router.post("/screenshot", async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       max_completion_tokens: 8192,
+      temperature: 0,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
