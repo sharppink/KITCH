@@ -68,7 +68,7 @@ export function StockTag({ stock, onPress }: StockTagProps) {
 
 export function StockTagCompact({ stock }: { stock: StockRecommendation }) {
   const colors = relevanceColors[stock.relevance];
-  const label = isKoreanCode(stock.ticker) ? stock.company : stock.ticker;
+  const label = stock.company || stock.ticker;
 
   return (
     <View style={[styles.tagCompact, { backgroundColor: colors.bg, borderColor: colors.border }]}>
