@@ -53,6 +53,7 @@ export default function ResultScreen() {
   const [showStockSheet, setShowStockSheet] = useState(false);
   const [showCredInfo, setShowCredInfo] = useState(false);
   const [showSentimentInfo, setShowSentimentInfo] = useState(false);
+  const [showStocksInfo, setShowStocksInfo] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoEditText, setMemoEditText] = useState('');
@@ -446,6 +447,13 @@ export default function ResultScreen() {
                   <Feather name="trending-up" size={13} color="#fff" />
                 </LinearGradient>
                 <Text style={styles.cardTitle}>관련 종목</Text>
+                <TouchableOpacity
+                  style={styles.infoBtn}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowStocksInfo(true); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.infoBtnText}>i</Text>
+                </TouchableOpacity>
               </View>
               <Text style={styles.stocksSubHint}>탭하면 상세 시세·주문</Text>
             </View>
@@ -464,6 +472,70 @@ export default function ResultScreen() {
             </View>
           </Card>
           )}
+
+          {/* 관련 종목 선정 기준 모달 */}
+          <Modal visible={showStocksInfo} transparent animationType="fade"
+            onRequestClose={() => setShowStocksInfo(false)}>
+            <Pressable style={styles.modalOverlay} onPress={() => setShowStocksInfo(false)}>
+              <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalTitleRow}>
+                    <LinearGradient colors={['#16A34A', '#22C55E']} style={styles.infoBtnLarge}>
+                      <Text style={styles.infoBtnLargeText}>i</Text>
+                    </LinearGradient>
+                    <Text style={styles.modalTitle}>관련 종목 선정 기준</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowStocksInfo(false)}>
+                    <Feather name="x" size={18} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalDivider} />
+
+                <View style={styles.formulaSection}>
+                  <Text style={styles.formulaTitle}>📋 선정 우선순위</Text>
+                  {[
+                    { rank: '1순위', desc: '콘텐츠 본문·자막에 실명 언급된 종목' },
+                    { rank: '2순위', desc: '해당 산업·테마의 시가총액 상위 대표주' },
+                    { rank: '3순위', desc: '관련 공급망·경쟁사·수혜 섹터 종목' },
+                  ].map(({ rank, desc }) => (
+                    <View key={rank} style={styles.criterionRow}>
+                      <View style={styles.criterionBadge}>
+                        <Text style={styles.criterionBadgeText}>{rank}</Text>
+                      </View>
+                      <Text style={styles.criterionDesc}>{desc}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.formulaSection}>
+                  <Text style={styles.formulaTitle}>🎯 관련도 판단 기준</Text>
+                  {[
+                    { label: '관련도 높음', color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0', desc: '콘텐츠에 직접 언급되거나 핵심 테마의 시총 1~2위 종목' },
+                    { label: '관련도 보통', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', desc: '동일 공급망·경쟁사·직접 수혜 관계 종목' },
+                    { label: '관련도 낮음', color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', desc: '섹터 유사성 또는 매크로 환경 연관성만 있는 종목' },
+                  ].map(({ label, color, bg, border, desc }) => (
+                    <View key={label} style={[styles.relevanceCriterionRow, { backgroundColor: bg, borderColor: border }]}>
+                      <Text style={[styles.relevanceCriterionLabel, { color }]}>{label}</Text>
+                      <Text style={styles.relevanceCriterionDesc}>{desc}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={[styles.formulaSection, { marginBottom: 0 }]}>
+                  <Text style={styles.formulaTitle}>⚠️ 선정 원칙</Text>
+                  <Text style={styles.modalNoteText}>
+                    관련성이 명확한 종목만 표시합니다. 억지로 채우지 않으며, 관련 종목이 없으면 표시하지 않습니다.{'\n'}
+                    국내(KRX) 2개 + 해외(US) 1개를 기본으로 하되, 품질이 비율보다 우선합니다.
+                  </Text>
+                </View>
+
+                <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowStocksInfo(false)}>
+                  <Text style={styles.modalCloseBtnText}>확인</Text>
+                </TouchableOpacity>
+              </Pressable>
+            </Pressable>
+          </Modal>
 
           {/* 추천 뉴스 */}
           {!cannotAnalyze && (result.sectorTags?.length ?? 0) > 0 && (
@@ -710,6 +782,21 @@ const styles = StyleSheet.create({
   criteriaText: { flex: 1, gap: 2 },
   criteriaLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.text },
   criteriaDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+
+  /* 관련 종목 모달 */
+  criterionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
+  criterionBadge: {
+    backgroundColor: Colors.primaryBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3,
+    minWidth: 52, alignItems: 'center',
+  },
+  criterionBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: Colors.primary },
+  criterionDesc: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.text, lineHeight: 19, paddingTop: 2 },
+  relevanceCriterionRow: {
+    borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 7,
+  },
+  relevanceCriterionLabel: { fontFamily: 'Inter_700Bold', fontSize: 12, marginBottom: 3 },
+  relevanceCriterionDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+
   modalNote: {
     flexDirection: 'row', gap: 6, alignItems: 'flex-start',
     backgroundColor: '#FFF9EC', borderRadius: 8, padding: 10, marginBottom: 16,
