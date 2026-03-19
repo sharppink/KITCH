@@ -163,7 +163,7 @@ export default function Home() {
           <Pressable style={styles.onboardingOverlay} onPress={dismissOnboarding}>
             <Pressable style={styles.onboardingCard} onPress={() => {}}>
               <View style={styles.onboardingIconBg}>
-                <Feather name="bookmark" size={28} color={Colors.primary} />
+                <Feather name="share-2" size={28} color={Colors.primary} />
               </View>
               <Text style={styles.onboardingTitle}>투자 뉴스,{'\n'}이제 빠르게 소화하세요</Text>
               <Text style={styles.onboardingBody}>
@@ -221,7 +221,7 @@ export default function Home() {
             contentContainerStyle={[styles.emptyScroll, { paddingBottom: 100 }]}>
             <View style={styles.heroBanner}>
               <View style={[styles.heroIcon, { backgroundColor: '#EEF0FF' }]}>
-                <Feather name="bookmark" size={22} color={Colors.primary} />
+                <Feather name="share-2" size={22} color={Colors.primary} />
               </View>
               <Text style={styles.heroTitle}>링크 하나로{'\n'}투자 뉴스 핵심만 보기</Text>
               <Text style={styles.heroSubtitle}>
