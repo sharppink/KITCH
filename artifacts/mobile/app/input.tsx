@@ -18,13 +18,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { AnalysisLoadingOverlay } from '@/components/AnalysisLoadingOverlay';
-import { analyzeNewsLink, analyzeYouTube } from '@/services/aiAnalysis';
+import { analyzeNewsLink, analyzeTwitter, analyzeYouTube, isValidTwitterUrl } from '@/services/aiAnalysis';
 import { extractVideoId, isValidYouTubeUrl } from '@/services/youtube';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { Card } from '@/components/Card';
 import { Toast } from '@/components/Toast';
 
-type ContentType = 'news' | 'youtube';
+type ContentType = 'news' | 'youtube' | 'twitter';
 
 const typeConfig = {
   news: {
@@ -43,12 +43,20 @@ const typeConfig = {
     inputLabel: '유튜브 URL',
     buttonLabel: '저장하고 요약 보기',
   },
+  twitter: {
+    title: '트위터(X) 저장',
+    subtitle: '트윗 URL을 붙여넣으면 투자 관련 내용을 분석해드려요',
+    placeholder: 'https://x.com/user/status/123456...',
+    icon: 'twitter' as const,
+    inputLabel: '트위터(X) URL',
+    buttonLabel: '저장하고 요약 보기',
+  },
 };
 
 export default function InputScreen() {
   const insets = useSafeAreaInsets();
   const { type, sharedUrl } = useLocalSearchParams<{ type: ContentType; sharedUrl?: string }>();
-  const contentType: ContentType = type === 'youtube' ? 'youtube' : 'news';
+  const contentType: ContentType = type === 'youtube' ? 'youtube' : type === 'twitter' ? 'twitter' : 'news';
   const config = typeConfig[contentType];
 
   const [inputText, setInputText] = useState(sharedUrl ?? '');
@@ -66,19 +74,19 @@ export default function InputScreen() {
 
   const validate = (): boolean => {
     if (contentType === 'youtube') {
-      if (!inputText.trim()) {
-        showToast('유튜브 URL을 입력해주세요.');
-        return false;
-      }
+      if (!inputText.trim()) { showToast('유튜브 URL을 입력해주세요.'); return false; }
       if (!isValidYouTubeUrl(inputText.trim())) {
         showToast('올바른 유튜브 URL을 입력해주세요. (예: https://youtu.be/...)');
         return false;
       }
-    } else {
-      if (!inputText.trim()) {
-        showToast('기사 URL을 입력해주세요.');
+    } else if (contentType === 'twitter') {
+      if (!inputText.trim()) { showToast('트위터(X) URL을 입력해주세요.'); return false; }
+      if (!isValidTwitterUrl(inputText.trim())) {
+        showToast('올바른 트위터 URL을 입력해주세요.\n(예: https://x.com/user/status/123...)');
         return false;
       }
+    } else {
+      if (!inputText.trim()) { showToast('기사 URL을 입력해주세요.'); return false; }
       if (!inputText.startsWith('http')) {
         showToast('http:// 또는 https://로 시작하는 URL을 입력해주세요.');
         return false;
@@ -97,11 +105,13 @@ export default function InputScreen() {
 
     try {
       let result;
-      if (contentType === 'news') {
-        result = await analyzeNewsLink(inputText.trim());
-      } else {
+      if (contentType === 'youtube') {
         const videoId = extractVideoId(inputText.trim())!;
         result = await analyzeYouTube(videoId, inputText.trim());
+      } else if (contentType === 'twitter') {
+        result = await analyzeTwitter(inputText.trim());
+      } else {
+        result = await analyzeNewsLink(inputText.trim());
       }
       const historyItem = await saveToHistory(result, inputText.trim() || undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -218,6 +228,12 @@ function getTips(type: ContentType): string[] {
         'youtube.com 및 youtu.be 링크 모두 지원해요',
         '투자 분석, 종목 리뷰, 경제 뉴스 영상에 잘 맞아요',
         '쇼츠, 일반 영상, 임베드 링크도 모두 됩니다',
+      ];
+    case 'twitter':
+      return [
+        'twitter.com 및 x.com 링크 모두 지원해요',
+        '트윗 URL 전체를 그대로 붙여넣으면 됩니다',
+        '비공개 계정이나 삭제된 트윗은 분석이 어려울 수 있어요',
       ];
   }
 }

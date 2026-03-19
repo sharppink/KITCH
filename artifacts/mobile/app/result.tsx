@@ -152,7 +152,7 @@ export default function ResultScreen() {
             <View style={styles.sourceRow}>
               <View style={styles.sourceIconBg}>
                 <Feather
-                  name={result.contentType === 'news' ? 'link' : result.contentType === 'youtube' ? 'youtube' : 'image'}
+                  name={result.contentType === 'news' ? 'link' : result.contentType === 'youtube' ? 'youtube' : result.contentType === 'twitter' ? 'twitter' : 'image'}
                   size={15}
                   color={Colors.primary}
                 />
@@ -187,12 +187,12 @@ export default function ResultScreen() {
                 activeOpacity={0.75}
               >
                 <Feather
-                  name={result.contentType === 'youtube' ? 'youtube' : 'external-link'}
+                  name={result.contentType === 'youtube' ? 'youtube' : result.contentType === 'twitter' ? 'twitter' : 'external-link'}
                   size={14}
                   color={Colors.primary}
                 />
                 <Text style={styles.originalLinkText}>
-                  {result.contentType === 'youtube' ? '유튜브에서 원본 영상 보기' : '원본 기사 보기'}
+                  {result.contentType === 'youtube' ? '유튜브에서 원본 영상 보기' : result.contentType === 'twitter' ? '트위터(X)에서 원본 보기' : '원본 기사 보기'}
                 </Text>
                 <Feather name="chevron-right" size={13} color={Colors.primary} />
               </TouchableOpacity>

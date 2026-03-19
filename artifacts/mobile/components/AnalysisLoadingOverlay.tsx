@@ -13,7 +13,7 @@ const MESSAGES = [
 
 interface AnalysisLoadingOverlayProps {
   visible: boolean;
-  contentType: 'news' | 'screenshot' | 'youtube';
+  contentType: 'news' | 'screenshot' | 'youtube' | 'twitter';
 }
 
 export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoadingOverlayProps) {
@@ -43,7 +43,7 @@ export function AnalysisLoadingOverlay({ visible, contentType }: AnalysisLoading
   if (!visible) return null;
 
   const typeLabel =
-    contentType === 'news' ? '기사' : contentType === 'screenshot' ? '스크린샷' : '영상';
+    contentType === 'news' ? '기사' : contentType === 'screenshot' ? '스크린샷' : contentType === 'twitter' ? '트윗' : '영상';
 
   return (
     <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>

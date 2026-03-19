@@ -76,6 +76,7 @@ export function getContentTypeLabel(contentType: string): string {
     case 'news': return '뉴스';
     case 'screenshot': return '스크린샷';
     case 'youtube': return '유튜브';
+    case 'twitter': return '트위터';
     default: return '콘텐츠';
   }
 }

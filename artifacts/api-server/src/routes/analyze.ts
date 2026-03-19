@@ -113,6 +113,11 @@ ROC 가중치법을 사용합니다. 아래 6개 기준을 각각 평가한 뒤 
 - sectorKeywords: 관련 뉴스 검색에 쓸 핵심 한국어 키워드 1~3개를 공백으로 구분. 예: "삼성전자 반도체 HBM", "테슬라 전기차", "코스피 금리"
 - JSON만 응답, 다른 텍스트 금지`;
 
+function extractTweetId(url: string): string | null {
+  const match = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
+  return match ? match[1] : null;
+}
+
 function extractYouTubeId(url: string): string | null {
   try {
     const u = new URL(url);
@@ -500,6 +505,75 @@ router.post("/youtube", async (req, res) => {
     });
   } catch (err: any) {
     console.error("유튜브 분석 오류:", err.message);
+    res.status(500).json({ error: "분석 중 오류가 발생했습니다: " + err.message });
+  }
+});
+
+// POST /api/analyze/twitter
+router.post("/twitter", async (req, res) => {
+  const { url } = req.body as { url?: string };
+  if (!url) {
+    res.status(400).json({ error: "url이 필요합니다" });
+    return;
+  }
+
+  const tweetId = extractTweetId(url);
+  if (!tweetId) {
+    res.status(400).json({ error: "유효한 트위터/X URL이 아닙니다 (예: https://x.com/user/status/123)" });
+    return;
+  }
+
+  try {
+    // Twitter oEmbed API (공개 트윗, 무료)
+    const oembedRes = await fetch(
+      `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&omit_script=true`,
+      {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!oembedRes.ok) {
+      res.status(400).json({ error: "트윗을 가져올 수 없습니다. 비공개 계정이거나 삭제된 트윗일 수 있어요." });
+      return;
+    }
+
+    const oembed = await oembedRes.json() as { html?: string; author_name?: string };
+    const $ = cheerio.load(oembed.html || "");
+
+    // blockquote 내 p 태그 텍스트 = 트윗 본문
+    const tweetText = $("blockquote > p").first().text().replace(/\s+/g, " ").trim();
+    const authorName = oembed.author_name || "알 수 없음";
+
+    if (!tweetText || tweetText.length < 5) {
+      res.status(400).json({ error: "트윗 내용을 추출할 수 없습니다." });
+      return;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 8192,
+      temperature: 0,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `다음 트위터(X) 게시물을 투자 관점에서 분석해주세요.\n\n작성자: ${authorName}\nURL: ${url}\n\n트윗 내용:\n${tweetText}`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const parsed = extractJSON(raw);
+
+    res.json({
+      ...parsed,
+      contentType: "twitter",
+      sourceTitle: parsed.sourceTitle || `@${authorName}의 트윗`,
+      analyzedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error("트위터 분석 오류:", err.message);
     res.status(500).json({ error: "분석 중 오류가 발생했습니다: " + err.message });
   }
 });

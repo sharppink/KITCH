@@ -247,6 +247,7 @@ export default function Home() {
               {[
                 { icon: 'link'    as const, type: 'news',    title: '뉴스 기사 링크 저장', desc: '기사 URL만 붙여넣으면 핵심 내용을 바로 정리', bg: Colors.primaryBg, color: Colors.primary },
                 { icon: 'youtube' as const, type: 'youtube', title: '유튜브 영상 저장',    desc: '영상 링크를 붙여넣으면 핵심을 텍스트로 정리', bg: '#FFF0F0',        color: '#EF4444'      },
+                { icon: 'twitter' as const, type: 'twitter', title: '트위터(X) 저장',      desc: '트윗 URL을 붙여넣으면 투자 내용을 바로 분석', bg: '#E8F5FE',        color: '#1D9BF0'      },
               ].map((s, i, arr) => (
                 <TouchableOpacity key={s.type}
                   style={[styles.stepRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
