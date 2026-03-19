@@ -114,14 +114,22 @@ ROC 가중치법을 사용합니다. 아래 6개 기준을 각각 평가한 뒤 
 - JSON만 응답, 다른 텍스트 금지`;
 
 function extractYouTubeId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
-    /youtube\.com\/embed\/([^&\n?#]+)/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
+  try {
+    const u = new URL(url);
+    // youtube.com/watch?v=... (v= may appear after other params like si=)
+    if (u.hostname.includes('youtube.com') && u.pathname === '/watch') {
+      const v = u.searchParams.get('v');
+      if (v) return v;
+    }
+    // youtu.be/<id>
+    if (u.hostname === 'youtu.be') {
+      const id = u.pathname.slice(1).split('/')[0];
+      if (id) return id;
+    }
+    // youtube.com/shorts/<id> or youtube.com/embed/<id>
+    const shortMatch = u.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/);
+    if (shortMatch) return shortMatch[1];
+  } catch {}
   return null;
 }
 
