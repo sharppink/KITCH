@@ -12,7 +12,7 @@ interface Props {
 }
 
 const RELEVANCE_COLORS = { high: '#16A34A', medium: '#D97706', low: '#6B7280' };
-const RELEVANCE_LABELS = { high: '높음', medium: '보통', low: '낮음' };
+const RELEVANCE_LABELS = { high: '관련도 높음', medium: '관련도 보통', low: '관련도 낮음' };
 
 export function StockPriceRow({ stock, onPress }: Props) {
   const [price, setPrice] = useState<StockPrice | null>(null);
