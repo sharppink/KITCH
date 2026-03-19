@@ -69,8 +69,8 @@ export default function Home() {
               </Text>
               <View style={styles.onboardingFeatures}>
                 {[
-                  { icon: 'link' as const, text: '뉴스 기사 — 링크만 붙여넣기' },
-                  { icon: 'youtube' as const, text: '유튜브 — 영상 핵심 텍스트로' },
+                  { icon: 'link' as const, text: '뉴스 기사 — URL 붙여넣기 또는 공유 버튼' },
+                  { icon: 'youtube' as const, text: '유튜브 — URL 붙여넣기 또는 공유 버튼' },
                 ].map((f) => (
                   <View key={f.text} style={styles.onboardingFeatureRow}>
                     <Feather name={f.icon} size={14} color={Colors.primary} />
