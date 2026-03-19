@@ -1,12 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
 import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
   Animated,
   Image,
-  Modal,
   Pressable,
   ScrollView,
   StatusBar,
@@ -21,31 +19,25 @@ import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { HistoryCard } from '@/components/HistoryCard';
 import { HistoryItem } from '@/hooks/useAnalysisHistory';
 
-const ONBOARDING_KEY = 'kitch_onboarding_v1';
-
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { history, deleteFromHistory } = useAnalysisHistory();
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
-      if (!val) setShowOnboarding(true);
-    });
-  }, []);
+  const showOnboarding = history.length === 0 && !onboardingDismissed;
 
   useEffect(() => {
     if (showOnboarding) {
-      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
     }
   }, [showOnboarding]);
 
-  const dismissOnboarding = async () => {
+  const dismissOnboarding = () => {
     Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
-      setShowOnboarding(false);
+      setOnboardingDismissed(true);
     });
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'done');
   };
 
   const handleViewResult = (item: HistoryItem) => {
