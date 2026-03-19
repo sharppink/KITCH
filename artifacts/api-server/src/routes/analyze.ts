@@ -457,17 +457,13 @@ router.post("/youtube", async (req, res) => {
 
     const displayTitle = videoTitle || "유튜브 영상";
 
-    // 3. 분석할 콘텐츠가 전혀 없으면 → 분석 불가 즉시 반환 (GPT 호출 안 함)
-    const hasContent = transcriptText.length > 50 || videoDescription.length > 50;
-    if (!hasContent) {
-      const reason = ytInfo.geoBlocked
-        ? "지역 제한으로 서버에서 영상에 접근할 수 없습니다."
-        : "자막 및 영상 설명을 가져올 수 없습니다.";
-      console.log(`[YouTube] 분석 불가 (${videoId}): ${reason}`);
+    // 3. 지역 제한 영상은 즉시 분석 불가 반환
+    if (ytInfo.geoBlocked) {
+      console.log(`[YouTube] 지역 제한 영상 (${videoId})`);
       res.json({
         contentType: "youtube",
         cannotAnalyze: true,
-        geoBlocked: ytInfo.geoBlocked,
+        geoBlocked: true,
         sourceTitle: displayTitle,
         channelName,
         analyzedAt: new Date().toISOString(),
@@ -475,11 +471,33 @@ router.post("/youtube", async (req, res) => {
       return;
     }
 
-    // 4. 분석에 사용할 콘텐츠 조합: 자막 > 영상 설명
+    // 4. 분석에 사용할 콘텐츠 조합: 자막 > 영상 설명 > 제목만 (최후 수단)
     const hasTranscript = transcriptText.length > 50;
-    const contentForAnalysis = hasTranscript
-      ? `[자막/자동자막]\n${transcriptText}${videoDescription ? `\n\n[영상 설명]\n${videoDescription}` : ""}`
-      : `[자막 없음 — 영상 설명으로 분석]\n${videoDescription}`;
+    const hasDescription = videoDescription.length > 50;
+    let contentForAnalysis: string;
+
+    if (hasTranscript) {
+      contentForAnalysis = `[자막/자동자막]\n${transcriptText}${videoDescription ? `\n\n[영상 설명]\n${videoDescription}` : ""}`;
+    } else if (hasDescription) {
+      contentForAnalysis = `[자막 없음 — 영상 설명으로 분석]\n${videoDescription}`;
+    } else {
+      // 자막·설명 모두 없어도 제목이 있으면 GPT로 분석 시도
+      // (뉴스 제목은 대부분 충분한 정보를 포함함)
+      if (!displayTitle || displayTitle === "유튜브 영상") {
+        console.log(`[YouTube] 분석 불가 — 제목·자막·설명 모두 없음 (${videoId})`);
+        res.json({
+          contentType: "youtube",
+          cannotAnalyze: true,
+          geoBlocked: false,
+          sourceTitle: displayTitle,
+          channelName,
+          analyzedAt: new Date().toISOString(),
+        });
+        return;
+      }
+      console.log(`[YouTube] 제목만으로 분석 시도 (${videoId}): ${displayTitle}`);
+      contentForAnalysis = `[자막·설명 불러오기 실패 — 제목 기반 분석]\n제목에서 파악 가능한 투자 정보를 최대한 분석하세요. 정보가 제한적임을 요약에 반영하세요.`;
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
