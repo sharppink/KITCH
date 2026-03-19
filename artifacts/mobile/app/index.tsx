@@ -64,6 +64,7 @@ export default function Home() {
 
   const [searchQuery, setSearchQuery]   = useState('');
   const [dateFilter, setDateFilter]     = useState<DateFilterKey>('all');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
 
   /* 폴더 관리 시트 */
@@ -254,56 +255,77 @@ export default function Home() {
               <View style={styles.badge}><Text style={styles.badgeText}>{history.length}</Text></View>
             </View>
 
-            {/* 검색창 */}
-            <View style={styles.searchBar}>
-              <Feather name="search" size={15} color={Colors.textTertiary} />
-              <TextInput
-                ref={searchInputRef}
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="제목, 키포인트, 종목명으로 검색..."
-                placeholderTextColor={Colors.textTertiary}
-                returnKeyType="search"
-                autoCorrect={false}
-                autoCapitalize="none"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <View style={styles.clearBtn}>
-                    <Feather name="x" size={11} color="#fff" />
-                  </View>
-                </TouchableOpacity>
-              )}
+            {/* ── 검색창 (이미지와 동일한 단일 바) ── */}
+            <View style={styles.searchBarWrap}>
+              {/* 좌: 돋보기 + 입력 */}
+              <View style={styles.searchBarInner}>
+                <Feather name="search" size={15} color={Colors.textTertiary} />
+                <TextInput
+                  ref={searchInputRef}
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="키워드로 검색..."
+                  placeholderTextColor={Colors.textTertiary}
+                  returnKeyType="search"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <View style={styles.clearBtn}>
+                      <Feather name="x" size={11} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* 구분선 */}
+              <View style={styles.searchDivider} />
+
+              {/* 우: 달력 아이콘 — 탭하면 날짜 필터 토글 */}
+              <TouchableOpacity
+                style={[styles.calendarBtn, showDatePicker && styles.calendarBtnActive]}
+                onPress={() => { Haptics.selectionAsync(); setShowDatePicker(v => !v); }}
+                activeOpacity={0.75}
+              >
+                <Feather name="calendar" size={16}
+                  color={dateFilter !== 'all' ? Colors.primary : showDatePicker ? Colors.primary : Colors.textSecondary} />
+                {dateFilter !== 'all' && <View style={styles.calendarActiveDot} />}
+              </TouchableOpacity>
             </View>
 
-            {/* 날짜 필터 칩 */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterChipsRow} style={styles.filterChipsScroll}>
-              {DATE_FILTERS.map(({ key, label }) => {
-                const active = dateFilter === key;
-                return (
-                  <TouchableOpacity key={key}
-                    style={[styles.filterChip, active && styles.filterChipActive]}
-                    onPress={() => { Haptics.selectionAsync(); setDateFilter(key); }}
-                    activeOpacity={0.75}>
-                    {key === 'all'   && <Feather name="list"     size={12} color={active ? '#fff' : Colors.textSecondary} />}
-                    {key === 'today' && <Feather name="sun"      size={12} color={active ? '#fff' : Colors.textSecondary} />}
-                    {key === 'week'  && <Feather name="calendar" size={12} color={active ? '#fff' : Colors.textSecondary} />}
-                    {key === 'month' && <Feather name="clock"    size={12} color={active ? '#fff' : Colors.textSecondary} />}
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
-                    {key !== 'all' && (() => {
-                      const cnt = history.filter((i) => matchesDateFilter(i, key)).length;
-                      return cnt > 0 ? (
-                        <View style={[styles.filterChipBadge, active && styles.filterChipBadgeActive]}>
-                          <Text style={[styles.filterChipBadgeText, active && styles.filterChipBadgeTextActive]}>{cnt}</Text>
-                        </View>
-                      ) : null;
-                    })()}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+            {/* 날짜 필터 드롭다운 — 달력 아이콘 탭 시 */}
+            {showDatePicker && (
+              <View style={styles.datePicker}>
+                {DATE_FILTERS.map(({ key, label }) => {
+                  const active = dateFilter === key;
+                  const cnt = key !== 'all' ? history.filter((i) => matchesDateFilter(i, key)).length : history.length;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.datePickerItem,
+                        active && styles.datePickerItemActive,
+                        key === 'month' && { borderBottomWidth: 0 },
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setDateFilter(key);
+                        setShowDatePicker(false);
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      {active
+                        ? <Feather name="check-circle" size={14} color={Colors.primary} />
+                        : <Feather name="circle"       size={14} color={Colors.border} />}
+                      <Text style={[styles.datePickerLabel, active && styles.datePickerLabelActive]}>{label}</Text>
+                      <Text style={styles.datePickerCount}>{cnt}건</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {/* 폴더 탭 */}
             {folders.length > 0 && (
@@ -604,26 +626,40 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
 
-  /* 검색창 */
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+  /* 검색창 — 단일 바 */
+  searchBarWrap: {
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 10,
+    borderRadius: 14, marginBottom: 10, overflow: 'hidden',
+  },
+  searchBarInner: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 13,
   },
   searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.text, paddingVertical: 0 },
   clearBtn: { width: 18, height: 18, borderRadius: 9, backgroundColor: Colors.textTertiary, alignItems: 'center', justifyContent: 'center' },
+  searchDivider: { width: 1, height: 24, backgroundColor: Colors.border },
+  calendarBtn: { paddingHorizontal: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
+  calendarBtnActive: { backgroundColor: Colors.primaryBg },
+  calendarActiveDot: {
+    position: 'absolute', top: 10, right: 10,
+    width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary,
+  },
 
-  /* 날짜 필터 */
-  filterChipsScroll: { marginBottom: 8, marginHorizontal: -16 },
-  filterChipsRow: { paddingHorizontal: 16, gap: 8, paddingVertical: 2 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
-  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterChipText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary },
-  filterChipTextActive: { color: '#fff', fontFamily: 'Inter_600SemiBold' },
-  filterChipBadge: { backgroundColor: Colors.border, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
-  filterChipBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  filterChipBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: Colors.textSecondary },
-  filterChipBadgeTextActive: { color: '#fff' },
+  /* 날짜 필터 드롭다운 */
+  datePicker: {
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 14, marginBottom: 10, overflow: 'hidden',
+  },
+  datePickerItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 13,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  datePickerItemActive: { backgroundColor: Colors.primaryBg },
+  datePickerLabel: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, color: Colors.text },
+  datePickerLabelActive: { fontFamily: 'Inter_700Bold', color: Colors.primary },
+  datePickerCount: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary },
 
   /* 폴더 탭 */
   folderTabsScroll: { marginBottom: 10, marginHorizontal: -16 },

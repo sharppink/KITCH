@@ -43,17 +43,17 @@ export function StockPriceRow({ stock, onPress }: Props) {
       {/* 연관성 인디케이터 */}
       <View style={[styles.relevanceDot, { backgroundColor: dotColor }]} />
 
-      {/* 종목 정보 */}
+      {/* 종목 정보 — 회사명 위, 티커 아래 */}
       <View style={styles.stockInfo}>
-        <View style={styles.tickerRow}>
-          <Text style={styles.ticker}>{stock.ticker}</Text>
+        <View style={styles.companyRow}>
+          <Text style={styles.company} numberOfLines={1}>{stock.company}</Text>
           <View style={[styles.relevanceBadge, { backgroundColor: dotColor + '18' }]}>
             <Text style={[styles.relevanceText, { color: dotColor }]}>
               {RELEVANCE_LABELS[stock.relevance]}
             </Text>
           </View>
         </View>
-        <Text style={styles.company} numberOfLines={1}>{stock.company}</Text>
+        <Text style={styles.ticker}>{stock.ticker}</Text>
       </View>
 
       {/* 시세 */}
@@ -91,13 +91,11 @@ const styles = StyleSheet.create({
     width: 8, height: 8, borderRadius: 4, flexShrink: 0,
   },
   stockInfo: { flex: 1, gap: 2, minWidth: 0 },
-  tickerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ticker: { fontFamily: 'Inter_700Bold', fontSize: 14, color: Colors.text },
-  relevanceBadge: {
-    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
-  },
+  companyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  company: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text, flex: 1 },
+  ticker: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
+  relevanceBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   relevanceText: { fontFamily: 'Inter_600SemiBold', fontSize: 10 },
-  company: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
 
   priceSection: { alignItems: 'flex-end', gap: 3 },
   priceValue: { fontFamily: 'Inter_700Bold', fontSize: 14 },
