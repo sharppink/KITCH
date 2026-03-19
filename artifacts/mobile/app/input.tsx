@@ -135,7 +135,7 @@ export default function InputScreen() {
           <Feather name={config.icon} size={16} color="rgba(255,255,255,0.8)" />
           <Text style={styles.headerTitle}>{config.title}</Text>
         </View>
-        <View style={styles.backButton} />
+        <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
