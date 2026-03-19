@@ -66,6 +66,7 @@ export default function Home() {
   const [dateFilter, setDateFilter]         = useState<DateFilterKey>('all');
   const [rangeStart, setRangeStart]         = useState<string | null>(null); // 'YYYY-MM-DD'
   const [rangeEnd, setRangeEnd]             = useState<string | null>(null);
+  const [rangeEditMode, setRangeEditMode]   = useState<'start' | 'end'>('start');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [calMonth, setCalMonth]             = useState(() => new Date());
   const [activeFolder, setActiveFolder]     = useState<string | null>(null);
@@ -308,7 +309,11 @@ export default function Home() {
               {/* 우: 달력 아이콘 */}
               <TouchableOpacity
                 style={[styles.calendarBtn, (showDatePicker || rangeStart || dateFilter !== 'all') && styles.calendarBtnActive]}
-                onPress={() => { Haptics.selectionAsync(); setShowDatePicker(v => !v); }}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setRangeEditMode(rangeStart && !rangeEnd ? 'end' : 'start');
+                  setShowDatePicker(v => !v);
+                }}
                 activeOpacity={0.75}
               >
                 <Feather name="calendar" size={16}
@@ -453,19 +458,27 @@ export default function Home() {
 
             {/* 선택 상태 표시 바 */}
             <View style={styles.rangeStatusBar}>
-              <View style={[styles.rangeStatusBox, rangeStart && styles.rangeStatusBoxFilled]}>
-                <Text style={styles.rangeStatusLabel}>시작일</Text>
+              <TouchableOpacity activeOpacity={0.75}
+                style={[styles.rangeStatusBox, rangeStart && styles.rangeStatusBoxFilled, rangeEditMode === 'start' && styles.rangeStatusBoxEditing]}
+                onPress={() => { Haptics.selectionAsync(); setRangeEditMode('start'); }}>
+                <Text style={[styles.rangeStatusLabel, rangeEditMode === 'start' && styles.rangeStatusLabelEditing]}>
+                  {rangeEditMode === 'start' ? '▶ 시작일' : '시작일'}
+                </Text>
                 <Text style={[styles.rangeStatusDate, rangeStart && styles.rangeStatusDateFilled]}>
-                  {rangeStart ?? '선택 안 됨'}
+                  {rangeStart ?? '탭하여 선택'}
                 </Text>
-              </View>
-              <Feather name="arrow-right" size={14} color={Colors.textTertiary} style={{ marginTop: 16 }} />
-              <View style={[styles.rangeStatusBox, rangeEnd && styles.rangeStatusBoxFilled]}>
-                <Text style={styles.rangeStatusLabel}>종료일</Text>
+              </TouchableOpacity>
+              <Feather name="arrow-right" size={14} color={Colors.textTertiary} style={{ marginTop: 18 }} />
+              <TouchableOpacity activeOpacity={0.75}
+                style={[styles.rangeStatusBox, rangeEnd && styles.rangeStatusBoxFilled, rangeEditMode === 'end' && styles.rangeStatusBoxEditing]}
+                onPress={() => { Haptics.selectionAsync(); setRangeEditMode('end'); }}>
+                <Text style={[styles.rangeStatusLabel, rangeEditMode === 'end' && styles.rangeStatusLabelEditing]}>
+                  {rangeEditMode === 'end' ? '▶ 종료일' : '종료일'}
+                </Text>
                 <Text style={[styles.rangeStatusDate, rangeEnd && styles.rangeStatusDateFilled]}>
-                  {rangeEnd ?? (rangeStart ? '선택해 주세요' : '—')}
+                  {rangeEnd ?? (rangeStart ? '탭하여 선택' : '—')}
                 </Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             {/* 구분선 */}
@@ -542,17 +555,20 @@ export default function Home() {
                         onPress={() => {
                           Haptics.selectionAsync();
                           setDateFilter('all');
-                          if (!rangeStart || (rangeStart && rangeEnd)) {
-                            // 처음 선택 or 재선택
+                          if (rangeEditMode === 'start') {
                             setRangeStart(ds);
-                            setRangeEnd(null);
+                            // 기존 종료일이 새 시작일보다 이전이면 초기화
+                            if (rangeEnd && ds > rangeEnd) setRangeEnd(null);
+                            setRangeEditMode('end');
                           } else {
-                            // 종료일 선택
-                            if (ds < rangeStart) {
+                            // 종료일 편집 모드
+                            if (rangeStart && ds < rangeStart) {
+                              // 시작일보다 앞을 누르면 → 새 시작일로 설정, 종료일 유지
                               setRangeStart(ds);
-                              setRangeEnd(rangeStart);
-                            } else if (ds === rangeStart) {
-                              setRangeStart(null);
+                              setRangeEditMode('end');
+                            } else if (ds === rangeEnd) {
+                              // 같은 종료일 다시 누르면 → 종료일 초기화
+                              setRangeEnd(null);
                             } else {
                               setRangeEnd(ds);
                               setShowDatePicker(false);
@@ -971,7 +987,9 @@ const styles = StyleSheet.create({
   rangeStatusBar: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 16 },
   rangeStatusBox: { flex: 1, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 10 },
   rangeStatusBoxFilled: { borderColor: Colors.primary, backgroundColor: Colors.primaryBg },
+  rangeStatusBoxEditing: { borderColor: Colors.primary, borderWidth: 2, shadowColor: Colors.primary, shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
   rangeStatusLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, marginBottom: 4 },
+  rangeStatusLabelEditing: { color: Colors.primary, fontFamily: 'Inter_600SemiBold' },
   rangeStatusDate: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.textSecondary },
   rangeStatusDateFilled: { color: Colors.primary },
 
