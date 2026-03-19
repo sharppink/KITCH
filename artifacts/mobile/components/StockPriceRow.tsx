@@ -33,10 +33,12 @@ export function StockPriceRow({ stock, onPress }: Props) {
   const arrow = isUp ? '▲' : '▼';
   const dotColor = RELEVANCE_COLORS[stock.relevance];
 
-  const formatPrice = (p: StockPrice) =>
-    p.currency === 'KRW'
+  const formatPrice = (p: StockPrice) => {
+    if (p.price == null) return '—';
+    return p.currency === 'KRW'
       ? p.price.toLocaleString('ko-KR') + '원'
       : '$' + p.price.toFixed(2);
+  };
 
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.75}>
@@ -69,7 +71,7 @@ export function StockPriceRow({ stock, onPress }: Props) {
             </Text>
             <View style={[styles.changeBadge, { backgroundColor: priceColor + '18' }]}>
               <Text style={[styles.changePct, { color: priceColor }]}>
-                {arrow} {Math.abs(price.changePercent).toFixed(2)}%
+                {arrow} {price.changePercent != null ? Math.abs(price.changePercent).toFixed(2) : '—'}%
               </Text>
             </View>
           </>

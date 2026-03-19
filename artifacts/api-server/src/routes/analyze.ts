@@ -637,8 +637,14 @@ router.get("/stock/price", async (req, res) => {
       if (!result?.meta) continue;
 
       const meta = result.meta;
-      const price: number = meta.regularMarketPrice ?? meta.previousClose;
-      const prevClose: number = meta.chartPreviousClose ?? meta.previousClose ?? price;
+      const rawPrice = meta.regularMarketPrice ?? meta.previousClose;
+      const rawPrev = meta.chartPreviousClose ?? meta.previousClose ?? rawPrice;
+
+      // 유효한 숫자가 아니면 다음 후보로
+      if (rawPrice == null || isNaN(rawPrice)) continue;
+
+      const price = rawPrice as number;
+      const prevClose = (rawPrev != null && !isNaN(rawPrev) ? rawPrev : price) as number;
       const change = price - prevClose;
       const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
 
