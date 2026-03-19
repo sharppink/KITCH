@@ -14,13 +14,6 @@ const OPTIONS = [
     color: Colors.primary,
   },
   {
-    type: 'screenshot' as const,
-    icon: 'image' as const,
-    label: '스크린샷',
-    desc: '실적표·차트 이미지를 텍스트로 읽어드려요',
-    color: '#7C3AED',
-  },
-  {
     type: 'youtube' as const,
     icon: 'youtube' as const,
     label: '유튜브 영상',

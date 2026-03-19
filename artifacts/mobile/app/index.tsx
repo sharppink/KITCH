@@ -70,7 +70,6 @@ export default function Home() {
               <View style={styles.onboardingFeatures}>
                 {[
                   { icon: 'link' as const, text: '뉴스 기사 — 링크만 붙여넣기' },
-                  { icon: 'image' as const, text: '스크린샷 — 이미지 바로 저장' },
                   { icon: 'youtube' as const, text: '유튜브 — 영상 핵심 텍스트로' },
                 ].map((f) => (
                   <View key={f.text} style={styles.onboardingFeatureRow}>
@@ -123,7 +122,6 @@ export default function Home() {
             <View style={styles.stepList}>
               {[
                 { icon: 'link' as const, type: 'news', title: '뉴스 기사 링크 저장', desc: '기사 URL만 붙여넣으면 핵심 내용을 바로 정리', bg: Colors.primaryBg, color: Colors.primary },
-                { icon: 'image' as const, type: 'screenshot', title: '스크린샷 저장', desc: '실적표·차트 이미지를 올리면 내용을 읽어드려요', bg: '#F3EEFF', color: '#7C3AED' },
                 { icon: 'youtube' as const, type: 'youtube', title: '유튜브 영상 저장', desc: '영상 링크를 붙여넣으면 핵심을 텍스트로 정리', bg: '#FFF0F0', color: '#EF4444' },
               ].map((s, i, arr) => (
                 <TouchableOpacity

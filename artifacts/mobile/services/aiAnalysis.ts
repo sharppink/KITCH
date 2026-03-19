@@ -1,7 +1,7 @@
 // AI 분석 서비스 - 실제 OpenAI 연동 (API 서버 경유)
 
 export type Sentiment = 'positive' | 'neutral' | 'negative';
-export type ContentType = 'news' | 'screenshot' | 'youtube';
+export type ContentType = 'news' | 'youtube';
 
 export interface StockRecommendation {
   ticker: string;
@@ -50,10 +50,6 @@ async function callAnalyzeAPI(
 
 export async function analyzeNewsLink(url: string): Promise<AnalysisResult> {
   return callAnalyzeAPI('news', { url });
-}
-
-export async function analyzeScreenshot(imageBase64: string): Promise<AnalysisResult> {
-  return callAnalyzeAPI('screenshot', { imageBase64 });
 }
 
 export async function analyzeYouTube(videoId: string, url: string): Promise<AnalysisResult> {
