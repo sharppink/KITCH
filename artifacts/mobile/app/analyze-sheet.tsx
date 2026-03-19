@@ -10,14 +10,14 @@ const OPTIONS = [
     type: 'news' as const,
     icon: 'link' as const,
     label: '뉴스 기사',
-    desc: '기사 URL 하나로 핵심 내용을 바로 정리',
+    desc: 'URL 붙여넣기 또는 공유 버튼으로 바로 핵심 정리',
     color: Colors.primary,
   },
   {
     type: 'youtube' as const,
     icon: 'youtube' as const,
     label: '유튜브 영상',
-    desc: '영상 링크를 붙여넣으면 핵심만 정리',
+    desc: '영상 URL 붙여넣기 또는 공유 버튼으로 바로 요약',
     color: '#EF4444',
   },
 ];
