@@ -161,10 +161,18 @@ export default function ResultScreen() {
               <Text style={styles.analyzedAt}>
                 {getContentTypeLabel(result.contentType)} · {formatDate(new Date(result.analyzedAt))} 분석 완료
               </Text>
-              <View style={styles.sourceBadges}>
-                <SentimentBadge sentiment={result.sentiment} />
-              </View>
             </View>
+
+            {/* 섹터 태그 — 소스 카드 하단 */}
+            {(result.sectorTags?.length ?? 0) > 0 && (
+              <View style={styles.sectorTagsRow}>
+                {(result.sectorTags ?? []).map((tag) => (
+                  <View key={tag} style={styles.sectorTag}>
+                    <Text style={styles.sectorTagText}># {tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* 원본 보기 버튼 — URL 있을 때만 표시 */}
             {inputUrl && result.contentType !== 'screenshot' as any && (
@@ -537,15 +545,6 @@ export default function ResultScreen() {
                 <Feather name="rss" size={13} color="#fff" />
               </LinearGradient>
               <Text style={styles.cardTitle}>추천 뉴스</Text>
-            </View>
-
-            {/* 섹터 태그 */}
-            <View style={styles.sectorTagsRow}>
-              {(result.sectorTags ?? []).map((tag) => (
-                <View key={tag} style={styles.sectorTag}>
-                  <Text style={styles.sectorTagText}># {tag}</Text>
-                </View>
-              ))}
             </View>
 
             {/* 관련 추천 뉴스 */}
