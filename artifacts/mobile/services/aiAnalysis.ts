@@ -21,7 +21,7 @@ export interface AnalysisResult {
   cannotAnalyze?: boolean;
   geoBlocked?: boolean;
   sectorTags?: string[];
-  marketContext?: string;
+  sectorKeywords?: string;
 }
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN

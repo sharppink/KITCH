@@ -26,10 +26,12 @@ import Colors from '@/constants/colors';
 import { Card } from '@/components/Card';
 import { ProgressBar } from '@/components/ProgressBar';
 import { SentimentBadge } from '@/components/SentimentBadge';
-import { StockTag } from '@/components/StockTag';
 import { StockPriceSheet } from '@/components/StockPriceSheet';
+import { StockPriceRow } from '@/components/StockPriceRow';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
+import { useFolders } from '@/hooks/useFolders';
 import { AnalysisResult, StockRecommendation } from '@/services/aiAnalysis';
+import { fetchSectorNews, formatNewsAge, NewsItem } from '@/services/sectorNews';
 import {
   getCredibilityColor,
   getCredibilityLabel,
@@ -41,13 +43,19 @@ import {
 export default function ResultScreen() {
   const insets = useSafeAreaInsets();
   const { historyId } = useLocalSearchParams<{ historyId: string }>();
-  const { history, updateMemo } = useAnalysisHistory();
+  const { history, updateMemo, updateFolder } = useAnalysisHistory();
+  const { folders, addFolder } = useFolders();
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
+  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
   const [memo, setMemo] = useState('');
+  const [relatedNews, setRelatedNews] = useState<NewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockRecommendation | null>(null);
   const [showStockSheet, setShowStockSheet] = useState(false);
+  const [showFolderSheet, setShowFolderSheet] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const [showCredInfo, setShowCredInfo] = useState(false);
   const [showSentimentInfo, setShowSentimentInfo] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -64,10 +72,18 @@ export default function ResultScreen() {
         setResult(item.result);
         setInputUrl(item.inputUrl);
         setMemo(item.memo ?? '');
+        setCurrentFolderId(item.folderId);
         Animated.parallel([
           Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
           Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
         ]).start();
+        // 섹터 뉴스 자동 fetch
+        if (item.result.sectorKeywords && !item.result.cannotAnalyze) {
+          setNewsLoading(true);
+          fetchSectorNews(item.result.sectorKeywords)
+            .then(setRelatedNews)
+            .finally(() => setNewsLoading(false));
+        }
       }
     }
   }, [historyId, history]);
@@ -173,6 +189,21 @@ export default function ResultScreen() {
                 <Feather name="chevron-right" size={13} color={Colors.primary} />
               </TouchableOpacity>
             )}
+
+            {/* 폴더에 추가 버튼 */}
+            <TouchableOpacity
+              style={styles.folderAddBtn}
+              onPress={() => setShowFolderSheet(true)}
+              activeOpacity={0.75}
+            >
+              <Feather name="folder-plus" size={14} color={Colors.textSecondary} />
+              <Text style={styles.folderAddText}>
+                {currentFolderId
+                  ? `📁 ${folders.find(f => f.id === currentFolderId)?.name ?? '폴더'}`
+                  : '폴더에 추가'}
+              </Text>
+              <Feather name="chevron-right" size={13} color={Colors.textTertiary} />
+            </TouchableOpacity>
           </Card>
 
           {/* 신뢰도 점수 */}
@@ -426,54 +457,36 @@ export default function ResultScreen() {
           </Card>
           )}
 
-          {/* 관련 종목 */}
+          {/* 관련 종목 — 인라인 시세 */}
           {!cannotAnalyze && (
           <Card style={styles.stocksCard}>
-            <View style={styles.cardTitleRow}>
-              <LinearGradient colors={['#16A34A', '#22C55E']} style={styles.cardTitleIcon}>
-                <Feather name="trending-up" size={13} color="#fff" />
-              </LinearGradient>
-              <Text style={styles.cardTitle}>관련 종목</Text>
+            <View style={[styles.cardTitleRow, { justifyContent: 'space-between' }]}>
+              <View style={styles.cardTitleRow}>
+                <LinearGradient colors={['#16A34A', '#22C55E']} style={styles.cardTitleIcon}>
+                  <Feather name="trending-up" size={13} color="#fff" />
+                </LinearGradient>
+                <Text style={styles.cardTitle}>관련 종목</Text>
+              </View>
+              <Text style={styles.stocksSubHint}>탭하면 상세 시세·주문</Text>
             </View>
-            <Text style={styles.stocksSubtitle}>종목을 탭하면 실시간 시세와 주문 정보를 확인할 수 있습니다</Text>
-            <View style={styles.stocksList}>
+            <View style={styles.stocksInlineList}>
               {(result.recommendedStocks ?? []).map((stock) => (
-                <TouchableOpacity
+                <StockPriceRow
                   key={stock.ticker}
-                  activeOpacity={0.75}
+                  stock={stock}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setSelectedStock(stock);
                     setShowStockSheet(true);
                   }}
-                >
-                  <View style={styles.stockTapRow}>
-                    <StockTag stock={stock} />
-                    <View style={styles.stockTapHint}>
-                      <Text style={styles.stockTapHintText}>시세</Text>
-                      <Feather name="chevron-right" size={12} color={Colors.primary} />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.relevanceLegend}>
-              {[
-                { r: 'high' as const, label: '높은 연관성' },
-                { r: 'medium' as const, label: '보통 연관성' },
-                { r: 'low' as const, label: '낮은 연관성' },
-              ].map(({ r, label }) => (
-                <View key={r} style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: r === 'high' ? Colors.accent : r === 'medium' ? Colors.warning : Colors.neutral }]} />
-                  <Text style={styles.legendText}>{label}</Text>
-                </View>
+                />
               ))}
             </View>
           </Card>
           )}
 
-          {/* 시장 맥락 */}
-          {!cannotAnalyze && ((result.sectorTags?.length ?? 0) > 0 || result.marketContext) && (
+          {/* 시장 맥락 — 관련 추천 뉴스 */}
+          {!cannotAnalyze && (result.sectorTags?.length ?? 0) > 0 && (
           <Card style={styles.contextCard}>
             <View style={styles.cardTitleRow}>
               <LinearGradient colors={['#0F766E', '#0D9488']} style={styles.cardTitleIcon}>
@@ -481,18 +494,47 @@ export default function ResultScreen() {
               </LinearGradient>
               <Text style={styles.cardTitle}>시장 맥락</Text>
             </View>
-            {(result.sectorTags?.length ?? 0) > 0 && (
-              <View style={styles.sectorTagsRow}>
-                {(result.sectorTags ?? []).map((tag) => (
-                  <View key={tag} style={styles.sectorTag}>
-                    <Text style={styles.sectorTagText}># {tag}</Text>
-                  </View>
+
+            {/* 섹터 태그 */}
+            <View style={styles.sectorTagsRow}>
+              {(result.sectorTags ?? []).map((tag) => (
+                <View key={tag} style={styles.sectorTag}>
+                  <Text style={styles.sectorTagText}># {tag}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* 관련 추천 뉴스 */}
+            {newsLoading ? (
+              <View style={styles.newsLoadingRow}>
+                <Feather name="loader" size={14} color={Colors.textTertiary} />
+                <Text style={styles.newsLoadingText}>관련 뉴스 불러오는 중...</Text>
+              </View>
+            ) : relatedNews.length > 0 ? (
+              <View style={styles.newsList}>
+                {relatedNews.slice(0, 4).map((item, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.newsItem, idx === Math.min(relatedNews.length, 4) - 1 && styles.newsItemLast]}
+                    activeOpacity={0.75}
+                    onPress={() => item.url && Linking.openURL(item.url)}
+                  >
+                    <View style={styles.newsItemLeft}>
+                      <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+                      <View style={styles.newsMetaRow}>
+                        {item.source ? (
+                          <Text style={styles.newsSource}>{item.source}</Text>
+                        ) : null}
+                        <Text style={styles.newsAge}>{formatNewsAge(item.publishedAt)}</Text>
+                      </View>
+                    </View>
+                    <Feather name="external-link" size={13} color={Colors.textTertiary} />
+                  </TouchableOpacity>
                 ))}
               </View>
+            ) : (
+              <Text style={styles.newsEmpty}>관련 뉴스를 찾지 못했습니다</Text>
             )}
-            {result.marketContext ? (
-              <Text style={styles.marketContextText}>{result.marketContext}</Text>
-            ) : null}
           </Card>
           )}
 
@@ -577,6 +619,94 @@ export default function ResultScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      {/* 폴더 선택 바텀시트 */}
+      <Modal visible={showFolderSheet} transparent animationType="slide" onRequestClose={() => setShowFolderSheet(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowFolderSheet(false)}>
+            <Pressable style={styles.folderSheet} onPress={() => {}}>
+              <View style={styles.detailModalHandle} />
+              <View style={styles.folderSheetHeader}>
+                <View style={styles.cardTitleRow}>
+                  <Feather name="folder" size={17} color={Colors.primary} />
+                  <Text style={styles.folderSheetTitle}>폴더 선택</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowFolderSheet(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Feather name="x" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* 폴더 없음 옵션 */}
+              <TouchableOpacity
+                style={[styles.folderOption, !currentFolderId && styles.folderOptionActive]}
+                onPress={async () => {
+                  if (historyId) {
+                    await updateFolder(historyId, undefined);
+                    setCurrentFolderId(undefined);
+                  }
+                  setShowFolderSheet(false);
+                }}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.folderOptionEmoji}>📋</Text>
+                <Text style={styles.folderOptionName}>분류 없음</Text>
+                {!currentFolderId && <Feather name="check" size={16} color={Colors.primary} />}
+              </TouchableOpacity>
+
+              {/* 기존 폴더 목록 */}
+              {folders.map((folder) => (
+                <TouchableOpacity
+                  key={folder.id}
+                  style={[styles.folderOption, currentFolderId === folder.id && styles.folderOptionActive]}
+                  onPress={async () => {
+                    if (historyId) {
+                      await updateFolder(historyId, folder.id);
+                      setCurrentFolderId(folder.id);
+                    }
+                    setShowFolderSheet(false);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.folderOptionEmoji}>{folder.emoji}</Text>
+                  <Text style={styles.folderOptionName}>{folder.name}</Text>
+                  {currentFolderId === folder.id && <Feather name="check" size={16} color={Colors.primary} />}
+                </TouchableOpacity>
+              ))}
+
+              {/* 새 폴더 만들기 */}
+              <View style={styles.newFolderRow}>
+                <TextInput
+                  style={styles.newFolderInput}
+                  value={newFolderName}
+                  onChangeText={setNewFolderName}
+                  placeholder="새 폴더 이름..."
+                  placeholderTextColor={Colors.textTertiary}
+                  maxLength={20}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity
+                  style={[styles.newFolderBtn, !newFolderName.trim() && { opacity: 0.4 }]}
+                  disabled={!newFolderName.trim()}
+                  activeOpacity={0.8}
+                  onPress={async () => {
+                    if (!newFolderName.trim()) return;
+                    const folder = await addFolder(newFolderName.trim());
+                    if (historyId) {
+                      await updateFolder(historyId, folder.id);
+                      setCurrentFolderId(folder.id);
+                    }
+                    setNewFolderName('');
+                    setShowFolderSheet(false);
+                  }}
+                >
+                  <Feather name="plus" size={16} color="#fff" />
+                  <Text style={styles.newFolderBtnText}>만들기</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <StockPriceSheet
         stock={selectedStock}
         visible={showStockSheet}
@@ -788,36 +918,85 @@ const styles = StyleSheet.create({
     justifyContent: 'center', gap: 6,
   },
 
-  /* 관련 종목 — 탭 */
-  stockTapRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingRight: 4, marginBottom: 2,
+  /* 관련 종목 인라인 */
+  stocksSubHint: {
+    fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary,
   },
-  stockTapHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: Colors.primaryBg,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  stocksInlineList: { marginTop: 4 },
+
+  /* 폴더 추가 버튼 (소스 카드 하단) */
+  folderAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 10, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
-  stockTapHintText: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 11, color: Colors.primary,
+  folderAddText: {
+    flex: 1, fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary,
   },
 
   /* 시장 맥락 카드 */
   contextCard: { gap: 10 },
-  sectorTagsRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
-  },
+  sectorTagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   sectorTag: {
-    backgroundColor: '#0F766E18',
-    borderWidth: 1, borderColor: '#0F766E30',
+    backgroundColor: '#0F766E18', borderWidth: 1, borderColor: '#0F766E30',
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
   },
-  sectorTagText: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#0F766E',
+  sectorTagText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#0F766E' },
+
+  /* 뉴스 리스트 */
+  newsLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  newsLoadingText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary },
+  newsList: { gap: 0, marginTop: 2 },
+  newsItem: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  marketContextText: {
-    fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary,
-    lineHeight: 21,
+  newsItemLast: { borderBottomWidth: 0 },
+  newsItemLeft: { flex: 1, gap: 4 },
+  newsTitle: {
+    fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text, lineHeight: 19,
   },
+  newsMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  newsSource: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: Colors.primary },
+  newsAge: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
+  newsEmpty: {
+    fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary,
+    paddingVertical: 8, textAlign: 'center',
+  },
+
+  /* 폴더 픽커 바텀시트 */
+  folderSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingBottom: 32,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12, shadowRadius: 20, elevation: 12,
+  },
+  folderSheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  folderSheetTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text, marginLeft: 8 },
+  folderOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 13, paddingHorizontal: 8, borderRadius: 12,
+  },
+  folderOptionActive: { backgroundColor: Colors.primaryBg },
+  folderOptionEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
+  folderOptionName: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 15, color: Colors.text },
+  newFolderRow: {
+    flexDirection: 'row', gap: 10, marginTop: 12,
+    paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  newFolderInput: {
+    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.text,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11, backgroundColor: Colors.background,
+  },
+  newFolderBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11,
+  },
+  newFolderBtnText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#fff' },
   memoSaveText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
 });

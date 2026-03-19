@@ -12,6 +12,7 @@ export interface HistoryItem {
   inputUrl?: string;
   savedAt: string; // ISO string for JSON serialization
   memo?: string;
+  folderId?: string;
 }
 
 export function useAnalysisHistory() {
@@ -98,6 +99,21 @@ export function useAnalysisHistory() {
     [history]
   );
 
+  const updateFolder = useCallback(
+    async (id: string, folderId: string | undefined) => {
+      const updated = history.map((item) =>
+        item.id === id ? { ...item, folderId } : item
+      );
+      setHistory(updated);
+      try {
+        await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      } catch (error) {
+        console.error('Failed to update folder:', error);
+      }
+    },
+    [history]
+  );
+
   const clearHistory = useCallback(async () => {
     setHistory([]);
     try {
@@ -113,6 +129,7 @@ export function useAnalysisHistory() {
     saveToHistory,
     deleteFromHistory,
     updateMemo,
+    updateFolder,
     clearHistory,
     refresh: loadHistory,
   };

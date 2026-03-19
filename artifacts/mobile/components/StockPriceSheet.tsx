@@ -154,7 +154,7 @@ export function StockPriceSheet({ stock, visible, onClose }: Props) {
                 end={{ x: 1, y: 0 }}
               >
                 <Feather name="trending-up" size={16} color="#fff" />
-                <Text style={styles.orderBtnText}>키움에서 주문하기</Text>
+                <Text style={styles.orderBtnText}>주문하러가기</Text>
               </LinearGradient>
             </TouchableOpacity>
           ) : (

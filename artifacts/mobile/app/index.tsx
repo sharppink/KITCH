@@ -16,12 +16,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
+import { useFolders } from '@/hooks/useFolders';
 import { HistoryCard } from '@/components/HistoryCard';
 import { HistoryItem } from '@/hooks/useAnalysisHistory';
 
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { history, deleteFromHistory } = useAnalysisHistory();
+  const { folders } = useFolders();
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -48,11 +51,14 @@ export default function Home() {
     router.push({ pathname: '/input', params: { type } });
   };
 
-  // 일자별 그룹핑
+  // 일자별 그룹핑 (+ 폴더 필터)
   const groupedHistory = React.useMemo(() => {
+    const filtered = activeFolder
+      ? history.filter(item => item.folderId === activeFolder)
+      : history;
     const groups: Record<string, HistoryItem[]> = {};
     const now = new Date();
-    for (const item of history) {
+    for (const item of filtered) {
       const diff = Math.floor((now.getTime() - new Date(item.savedAt).getTime()) / 86400000);
       const label = diff === 0 ? '오늘' : diff === 1 ? '어제' : diff < 7 ? '이번 주' : diff < 30 ? '이번 달' : '이전';
       if (!groups[label]) groups[label] = [];
@@ -60,7 +66,7 @@ export default function Home() {
     }
     const ORDER = ['오늘', '어제', '이번 주', '이번 달', '이전'];
     return ORDER.filter(g => groups[g]).map(g => ({ title: g, data: groups[g] }));
-  }, [history]);
+  }, [history, activeFolder]);
 
   return (
     <View style={styles.container}>
@@ -172,6 +178,51 @@ export default function Home() {
                 <Text style={styles.badgeText}>{history.length}</Text>
               </View>
             </View>
+
+            {/* 폴더 탭 — 폴더가 하나라도 있을 때만 표시 */}
+            {folders.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.folderTabsRow}
+                style={styles.folderTabsScroll}
+              >
+                <TouchableOpacity
+                  style={[styles.folderTab, activeFolder === null && styles.folderTabActive]}
+                  onPress={() => setActiveFolder(null)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.folderTabText, activeFolder === null && styles.folderTabTextActive]}>
+                    전체
+                  </Text>
+                </TouchableOpacity>
+                {folders.map((folder) => {
+                  const count = history.filter(h => h.folderId === folder.id).length;
+                  const isActive = activeFolder === folder.id;
+                  return (
+                    <TouchableOpacity
+                      key={folder.id}
+                      style={[styles.folderTab, isActive && styles.folderTabActive]}
+                      onPress={() => setActiveFolder(isActive ? null : folder.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={styles.folderTabEmoji}>{folder.emoji}</Text>
+                      <Text style={[styles.folderTabText, isActive && styles.folderTabTextActive]}>
+                        {folder.name}
+                      </Text>
+                      {count > 0 && (
+                        <View style={[styles.folderTabBadge, isActive && styles.folderTabBadgeActive]}>
+                          <Text style={[styles.folderTabBadgeText, isActive && styles.folderTabBadgeTextActive]}>
+                            {count}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+
             {groupedHistory.map((section) => (
               <View key={section.title}>
                 <View style={styles.dateSectionRow}>
@@ -340,6 +391,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
   },
   badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
+
+  /* 폴더 탭 */
+  folderTabsScroll: { marginBottom: 8, marginHorizontal: -16 },
+  folderTabsRow: { paddingHorizontal: 16, gap: 8, paddingVertical: 4 },
+  folderTab: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  folderTabActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  folderTabEmoji: { fontSize: 14 },
+  folderTabText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary },
+  folderTabTextActive: { color: '#fff', fontFamily: 'Inter_600SemiBold' },
+  folderTabBadge: {
+    backgroundColor: Colors.border, borderRadius: 10,
+    paddingHorizontal: 6, paddingVertical: 1,
+  },
+  folderTabBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  folderTabBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: Colors.textSecondary },
+  folderTabBadgeTextActive: { color: '#fff' },
 
   dateSectionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
