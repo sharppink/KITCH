@@ -522,14 +522,6 @@ export default function ResultScreen() {
                   ))}
                 </View>
 
-                <View style={[styles.formulaSection, { marginBottom: 0 }]}>
-                  <Text style={styles.formulaTitle}>⚠️ 선정 원칙</Text>
-                  <Text style={styles.modalNoteText}>
-                    관련성이 명확한 종목만 표시합니다. 억지로 채우지 않으며, 관련 종목이 없으면 표시하지 않습니다.{'\n'}
-                    국내(KRX) 2개 + 해외(US) 1개를 기본으로 하되, 품질이 비율보다 우선합니다.
-                  </Text>
-                </View>
-
                 <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowStocksInfo(false)}>
                   <Text style={styles.modalCloseBtnText}>확인</Text>
                 </TouchableOpacity>
