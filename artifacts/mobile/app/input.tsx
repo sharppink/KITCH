@@ -31,28 +31,28 @@ type ContentType = 'news' | 'screenshot' | 'youtube';
 
 const typeConfig = {
   news: {
-    title: '뉴스 기사',
-    subtitle: '분석할 뉴스 또는 금융 기사의 URL을 입력해주세요',
+    title: '뉴스 기사 저장',
+    subtitle: '기사 URL을 붙여넣으면 핵심 내용만 골라서 보여드려요',
     placeholder: 'https://news.einfomax.co.kr/...',
     icon: 'link' as const,
     inputLabel: '기사 URL',
-    buttonLabel: '기사 분석하기',
+    buttonLabel: '저장하고 요약 보기',
   },
   screenshot: {
-    title: '금융 스크린샷',
-    subtitle: '실적 보고서, 차트, 공시 등의 스크린샷을 업로드해주세요',
+    title: '스크린샷 저장',
+    subtitle: '실적표·차트·공시 스크린샷을 올리면 내용을 읽어드려요',
     placeholder: '아래 버튼을 눌러 이미지를 선택하세요',
     icon: 'image' as const,
     inputLabel: '텍스트 직접 입력 (선택사항)',
-    buttonLabel: '스크린샷 분석하기',
+    buttonLabel: '저장하고 요약 보기',
   },
   youtube: {
-    title: '유튜브 영상',
-    subtitle: '투자 관련 유튜브 영상 링크를 입력해주세요',
+    title: '유튜브 영상 저장',
+    subtitle: '영상 링크를 붙여넣으면 핵심 내용을 텍스트로 정리해드려요',
     placeholder: 'https://youtube.com/watch?v=...',
     icon: 'youtube' as const,
     inputLabel: '유튜브 URL',
-    buttonLabel: '영상 분석하기',
+    buttonLabel: '저장하고 요약 보기',
   },
 };
 
@@ -295,21 +295,21 @@ function getTips(type: ContentType): string[] {
   switch (type) {
     case 'news':
       return [
-        '전체 기사 URL을 붙여넣으면 가장 정확한 분석이 가능합니다',
-        '로이터, 블룸버그, 한국경제, 연합뉴스 등의 기사를 지원합니다',
-        '유료 구독 기사는 분석이 제한될 수 있습니다',
+        '기사 URL 전체를 그대로 붙여넣으면 됩니다',
+        '한국경제, 연합뉴스, 블룸버그, 로이터 등 대부분 지원해요',
+        '유료 구독 기사는 내용을 불러오지 못할 수 있어요',
       ];
     case 'screenshot':
       return [
-        '이미지 내 텍스트가 선명하게 보여야 정확한 분석이 가능합니다',
-        '실적 발표, 차트, 애널리스트 보고서 스크린샷에 최적화되어 있습니다',
-        '해상도가 높을수록 OCR 정확도가 향상됩니다',
+        '텍스트가 선명하게 보이는 이미지일수록 더 잘 읽어드려요',
+        '실적 발표, 차트, 애널리스트 보고서에 최적화되어 있어요',
+        '해상도가 높을수록 더 정확하게 읽습니다',
       ];
     case 'youtube':
       return [
-        'youtube.com 및 youtu.be 링크를 모두 지원합니다',
-        '투자 분석, 종목 리뷰, 경제 뉴스 영상에 최적화되어 있습니다',
-        '쇼츠, 일반 영상, 임베드 링크 모두 지원합니다',
+        'youtube.com 및 youtu.be 링크 모두 지원해요',
+        '투자 분석, 종목 리뷰, 경제 뉴스 영상에 잘 맞아요',
+        '쇼츠, 일반 영상, 임베드 링크도 모두 됩니다',
       ];
   }
 }

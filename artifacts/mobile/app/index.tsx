@@ -66,20 +66,20 @@ export default function Home() {
           <Pressable style={styles.onboardingOverlay} onPress={dismissOnboarding}>
             <Pressable style={styles.onboardingCard} onPress={() => {}}>
               <View style={styles.onboardingIconBg}>
-                <Feather name="bar-chart-2" size={28} color={Colors.primary} />
+                <Feather name="bookmark" size={28} color={Colors.primary} />
               </View>
-              <Text style={styles.onboardingTitle}>투자 정보, 그냥 믿지 마세요</Text>
+              <Text style={styles.onboardingTitle}>투자 뉴스,{'\n'}이제 빠르게 소화하세요</Text>
               <Text style={styles.onboardingBody}>
-                뉴스 기사·스크린샷·유튜브 영상을{'\n'}
-                AI로 분석해 <Text style={styles.onboardingEmphasis}>신뢰도</Text>를 점수로 보여드려요.{'\n\n'}
-                다양한 플랫폼의 투자 정보를{'\n'}
-                한 곳에서 저장하고 비교해보세요.
+                놓치기 쉬운 투자 기사나 영상을{'\n'}
+                링크 하나로 저장하면{'\n'}
+                <Text style={styles.onboardingEmphasis}>핵심 내용</Text>만 골라서 보여드려요.{'\n\n'}
+                긴 기사 처음부터 끝까지{'\n'}읽을 필요 없어요.
               </Text>
               <View style={styles.onboardingFeatures}>
                 {[
-                  { icon: 'link' as const, text: '뉴스 기사 링크 분석' },
-                  { icon: 'image' as const, text: '스크린샷 OCR 분석' },
-                  { icon: 'youtube' as const, text: '유튜브 영상 분석' },
+                  { icon: 'link' as const, text: '뉴스 기사 — 링크만 붙여넣기' },
+                  { icon: 'image' as const, text: '스크린샷 — 이미지 바로 저장' },
+                  { icon: 'youtube' as const, text: '유튜브 — 영상 핵심 텍스트로' },
                 ].map((f) => (
                   <View key={f.text} style={styles.onboardingFeatureRow}>
                     <Feather name={f.icon} size={14} color={Colors.primary} />
@@ -88,7 +88,7 @@ export default function Home() {
                 ))}
               </View>
               <TouchableOpacity style={styles.onboardingBtn} onPress={dismissOnboarding} activeOpacity={0.85}>
-                <Text style={styles.onboardingBtnText}>확인, 시작할게요</Text>
+                <Text style={styles.onboardingBtnText}>확인</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
@@ -118,21 +118,21 @@ export default function Home() {
             {/* 환영 배너 */}
             <View style={styles.heroBanner}>
               <View style={[styles.heroIcon, { backgroundColor: '#EEF0FF' }]}>
-                <Feather name="cpu" size={22} color={Colors.primary} />
+                <Feather name="bookmark" size={22} color={Colors.primary} />
               </View>
-              <Text style={styles.heroTitle}>AI가 투자 정보를 분석해드려요</Text>
+              <Text style={styles.heroTitle}>링크 하나로{'\n'}투자 뉴스 핵심만 보기</Text>
               <Text style={styles.heroSubtitle}>
-                뉴스 기사, 스크린샷, 유튜브 영상 링크를{'\n'}붙여넣으면 신뢰도·종목·투자 심리를{'\n'}자동으로 분석합니다.
+                기사·스크린샷·유튜브를 저장하면{'\n'}AI가 핵심만 골라 정리해드려요.
               </Text>
             </View>
 
             {/* 사용 방법 */}
-            <Text style={styles.howTitle}>이렇게 사용하세요</Text>
+            <Text style={styles.howTitle}>이렇게 저장하세요</Text>
             <View style={styles.stepList}>
               {[
-                { icon: 'link' as const, type: 'news', title: '뉴스 기사 URL 붙여넣기', desc: '한국경제, 연합뉴스, Bloomberg 등 기사 주소', bg: Colors.primaryBg, color: Colors.primary },
-                { icon: 'image' as const, type: 'screenshot', title: '스크린샷 업로드', desc: '실적표, 리포트, 차트 이미지를 바로 분석', bg: '#F3EEFF', color: '#7C3AED' },
-                { icon: 'youtube' as const, type: 'youtube', title: '유튜브 링크 붙여넣기', desc: '투자 분석 영상의 요약·신뢰도를 한 번에', bg: '#FFF0F0', color: '#EF4444' },
+                { icon: 'link' as const, type: 'news', title: '뉴스 기사 링크 저장', desc: '기사 URL만 붙여넣으면 핵심 내용을 바로 정리', bg: Colors.primaryBg, color: Colors.primary },
+                { icon: 'image' as const, type: 'screenshot', title: '스크린샷 저장', desc: '실적표·차트 이미지를 올리면 내용을 읽어드려요', bg: '#F3EEFF', color: '#7C3AED' },
+                { icon: 'youtube' as const, type: 'youtube', title: '유튜브 영상 저장', desc: '영상 링크를 붙여넣으면 핵심을 텍스트로 정리', bg: '#FFF0F0', color: '#EF4444' },
               ].map((s, i, arr) => (
                 <TouchableOpacity
                   key={s.type}
@@ -154,7 +154,7 @@ export default function Home() {
 
             <View style={styles.historyHint}>
               <Feather name="clock" size={13} color={Colors.textTertiary} />
-              <Text style={styles.historyHintText}>분석이 완료되면 이 화면에 기록이 저장됩니다</Text>
+              <Text style={styles.historyHintText}>저장한 콘텐츠가 이 화면에 쌓입니다</Text>
             </View>
           </ScrollView>
         ) : (
@@ -187,8 +187,8 @@ export default function Home() {
           activeOpacity={0.85}
           onPress={() => router.push('/analyze-sheet')}
         >
-          <Feather name="zap" size={17} color="#fff" />
-          <Text style={styles.fabText}>분석 시작하기</Text>
+          <Feather name="plus" size={17} color="#fff" />
+          <Text style={styles.fabText}>콘텐츠 저장하기</Text>
         </TouchableOpacity>
       </View>
       <KiwoomBottomBar />

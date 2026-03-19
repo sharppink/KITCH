@@ -9,22 +9,22 @@ const OPTIONS = [
   {
     type: 'news' as const,
     icon: 'link' as const,
-    label: '뉴스 링크',
-    desc: '기사 URL을 붙여넣으면 AI가 요약해드려요',
+    label: '뉴스 기사',
+    desc: '기사 URL 하나로 핵심 내용을 바로 정리',
     color: Colors.primary,
   },
   {
     type: 'screenshot' as const,
     icon: 'image' as const,
     label: '스크린샷',
-    desc: '차트, 실적표, 보고서 이미지를 업로드하세요',
+    desc: '실적표·차트 이미지를 텍스트로 읽어드려요',
     color: '#7C3AED',
   },
   {
     type: 'youtube' as const,
     icon: 'youtube' as const,
     label: '유튜브 영상',
-    desc: '투자 관련 영상 링크를 분석해드려요',
+    desc: '영상 링크를 붙여넣으면 핵심만 정리',
     color: '#EF4444',
   },
 ];
@@ -42,8 +42,8 @@ export default function AnalyzeSheet() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 12 }]}>
       <View style={styles.grabber} />
-      <Text style={styles.title}>분석 유형 선택</Text>
-      <Text style={styles.subtitle}>분석할 투자 정보의 형태를 고르세요</Text>
+      <Text style={styles.title}>무엇을 저장할까요?</Text>
+      <Text style={styles.subtitle}>저장할 콘텐츠 형태를 고르세요</Text>
 
       <View style={styles.options}>
         {OPTIONS.map((opt) => (
