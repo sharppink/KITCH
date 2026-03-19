@@ -39,6 +39,11 @@ import {
   getContentTypeLabel,
 } from '@/utils/formatters';
 
+const openUrl = (url?: string) => {
+  if (!url) return;
+  Linking.openURL(url).catch(() => {});
+};
+
 export default function ResultScreen() {
   const insets = useSafeAreaInsets();
   const { historyId } = useLocalSearchParams<{ historyId: string }>();
@@ -178,7 +183,7 @@ export default function ResultScreen() {
             {inputUrl && result.contentType !== 'screenshot' as any && (
               <TouchableOpacity
                 style={styles.originalLinkBtn}
-                onPress={() => Linking.openURL(inputUrl)}
+                onPress={() => openUrl(inputUrl)}
                 activeOpacity={0.75}
               >
                 <Feather
@@ -560,7 +565,7 @@ export default function ResultScreen() {
                     key={idx}
                     style={[styles.newsItem, idx === Math.min(relatedNews.length, 4) - 1 && styles.newsItemLast]}
                     activeOpacity={0.75}
-                    onPress={() => item.url && Linking.openURL(item.url)}
+                    onPress={() => openUrl(item.url)}
                   >
                     <View style={styles.newsItemLeft}>
                       <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
