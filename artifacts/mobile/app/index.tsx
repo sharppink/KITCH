@@ -63,7 +63,8 @@ export default function Home() {
 
   const [searchQuery, setSearchQuery]       = useState('');
   const [dateFilter, setDateFilter]         = useState<DateFilterKey>('all');
-  const [selectedDate, setSelectedDate]     = useState<string | null>(null); // 'YYYY-MM-DD'
+  const [rangeStart, setRangeStart]         = useState<string | null>(null); // 'YYYY-MM-DD'
+  const [rangeEnd, setRangeEnd]             = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [calMonth, setCalMonth]             = useState(() => new Date());
   const [activeFolder, setActiveFolder]     = useState<string | null>(null);
@@ -110,17 +111,21 @@ export default function Home() {
   const filteredItems = useMemo(() =>
     history.filter((item) => {
       if (activeFolder && item.folderId !== activeFolder) return false;
-      if (selectedDate) {
+      if (rangeStart) {
         const d = new Date(item.savedAt);
         const itemDay = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (itemDay !== selectedDate) return false;
+        if (rangeEnd) {
+          if (itemDay < rangeStart || itemDay > rangeEnd) return false;
+        } else {
+          if (itemDay !== rangeStart) return false;
+        }
       } else {
         if (!matchesDateFilter(item, dateFilter)) return false;
       }
       if (!matchesKeyword(item, searchQuery.trim())) return false;
       return true;
     }),
-    [history, activeFolder, dateFilter, selectedDate, searchQuery]
+    [history, activeFolder, dateFilter, rangeStart, rangeEnd, searchQuery]
   );
 
   /* 날짜 그룹 (검색 중엔 null) */
@@ -293,13 +298,13 @@ export default function Home() {
 
               {/* 우: 달력 아이콘 */}
               <TouchableOpacity
-                style={[styles.calendarBtn, (showDatePicker || selectedDate || dateFilter !== 'all') && styles.calendarBtnActive]}
+                style={[styles.calendarBtn, (showDatePicker || rangeStart || dateFilter !== 'all') && styles.calendarBtnActive]}
                 onPress={() => { Haptics.selectionAsync(); setShowDatePicker(v => !v); }}
                 activeOpacity={0.75}
               >
                 <Feather name="calendar" size={16}
-                  color={(selectedDate || dateFilter !== 'all' || showDatePicker) ? Colors.primary : Colors.textSecondary} />
-                {(selectedDate || dateFilter !== 'all') && <View style={styles.calendarActiveDot} />}
+                  color={(rangeStart || dateFilter !== 'all' || showDatePicker) ? Colors.primary : Colors.textSecondary} />
+                {(rangeStart || dateFilter !== 'all') && <View style={styles.calendarActiveDot} />}
               </TouchableOpacity>
             </View>
 
@@ -317,6 +322,20 @@ export default function Home() {
                 </View>
               ) : null;
             })()}
+
+            {/* 활성 날짜 기간 표시 */}
+            {rangeStart && (
+              <View style={styles.activeFolderBar}>
+                <Feather name="calendar" size={13} color={Colors.primary} />
+                <Text style={styles.activeFolderBarName}>
+                  {rangeEnd ? `${rangeStart} ~ ${rangeEnd}` : rangeStart}
+                </Text>
+                <TouchableOpacity onPress={() => { setRangeStart(null); setRangeEnd(null); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Feather name="x" size={14} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* 검색 결과 */}
             {isSearching ? (
@@ -393,7 +412,7 @@ export default function Home() {
             <View style={styles.sheetTitleRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Feather name="calendar" size={18} color={Colors.primary} />
-                <Text style={styles.sheetTitle}>날짜 선택</Text>
+                <Text style={styles.sheetTitle}>기간 선택</Text>
               </View>
               <TouchableOpacity onPress={() => setShowDatePicker(false)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -405,14 +424,15 @@ export default function Home() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8, paddingBottom: 16, paddingHorizontal: 2 }}>
               {DATE_FILTERS.map(({ key, label }) => {
-                const active = !selectedDate && dateFilter === key;
+                const active = !rangeStart && dateFilter === key;
                 return (
                   <TouchableOpacity key={key}
                     style={[styles.quickChip, active && styles.quickChipActive]}
                     onPress={() => {
                       Haptics.selectionAsync();
                       setDateFilter(key);
-                      setSelectedDate(null);
+                      setRangeStart(null);
+                      setRangeEnd(null);
                       setShowDatePicker(false);
                     }}
                     activeOpacity={0.75}>
@@ -421,6 +441,23 @@ export default function Home() {
                 );
               })}
             </ScrollView>
+
+            {/* 선택 상태 표시 바 */}
+            <View style={styles.rangeStatusBar}>
+              <View style={[styles.rangeStatusBox, rangeStart && styles.rangeStatusBoxFilled]}>
+                <Text style={styles.rangeStatusLabel}>시작일</Text>
+                <Text style={[styles.rangeStatusDate, rangeStart && styles.rangeStatusDateFilled]}>
+                  {rangeStart ?? '선택 안 됨'}
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={14} color={Colors.textTertiary} style={{ marginTop: 16 }} />
+              <View style={[styles.rangeStatusBox, rangeEnd && styles.rangeStatusBoxFilled]}>
+                <Text style={styles.rangeStatusLabel}>종료일</Text>
+                <Text style={[styles.rangeStatusDate, rangeEnd && styles.rangeStatusDateFilled]}>
+                  {rangeEnd ?? (rangeStart ? '선택해 주세요' : '—')}
+                </Text>
+              </View>
+            </View>
 
             {/* 구분선 */}
             <View style={{ height: 1, backgroundColor: Colors.border, marginBottom: 16 }} />
@@ -457,7 +494,6 @@ export default function Home() {
                 const t = new Date();
                 return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
               })();
-              // 이 달에 기록이 있는 날짜 집합
               const datesWithHistory = new Set(
                 history.map(item => {
                   const d = new Date(item.savedAt);
@@ -468,7 +504,6 @@ export default function Home() {
                 ...Array(firstDow).fill(null),
                 ...Array.from({ length: daysTotal }, (_, i) => i + 1),
               ];
-              // 7의 배수로 맞춤
               while (cells.length % 7 !== 0) cells.push(null);
               const weeks: (number | null)[][] = [];
               for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
@@ -478,34 +513,60 @@ export default function Home() {
                   {week.map((day, di) => {
                     if (!day) return <View key={di} style={styles.calCell} />;
                     const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                    const isToday    = ds === todayStr;
-                    const isSelected = ds === selectedDate;
-                    const hasDot     = datesWithHistory.has(ds);
+                    const isToday     = ds === todayStr;
+                    const isStart     = ds === rangeStart;
+                    const isEnd       = ds === rangeEnd;
+                    const isEndpoint  = isStart || isEnd;
+                    const inRange     = rangeStart && rangeEnd && ds > rangeStart && ds < rangeEnd;
+                    const hasDot      = datesWithHistory.has(ds);
                     const isSun = di === 0, isSat = di === 6;
+
+                    // 범위 배경 (셀 전체)
+                    const rangeBg = inRange
+                      ? (di === 0 ? styles.rangeEdgeLeft : di === 6 ? styles.rangeEdgeRight : styles.rangeMid)
+                      : isStart && rangeEnd ? styles.rangeEdgeLeft
+                      : isEnd ? styles.rangeEdgeRight
+                      : undefined;
+
                     return (
-                      <TouchableOpacity key={di} style={styles.calCell}
+                      <TouchableOpacity key={di} style={[styles.calCell, rangeBg]}
                         onPress={() => {
                           Haptics.selectionAsync();
-                          if (isSelected) { setSelectedDate(null); setDateFilter('all'); }
-                          else { setSelectedDate(ds); setDateFilter('all'); }
-                          setShowDatePicker(false);
+                          setDateFilter('all');
+                          if (!rangeStart || (rangeStart && rangeEnd)) {
+                            // 처음 선택 or 재선택
+                            setRangeStart(ds);
+                            setRangeEnd(null);
+                          } else {
+                            // 종료일 선택
+                            if (ds < rangeStart) {
+                              setRangeStart(ds);
+                              setRangeEnd(rangeStart);
+                            } else if (ds === rangeStart) {
+                              setRangeStart(null);
+                            } else {
+                              setRangeEnd(ds);
+                              setShowDatePicker(false);
+                            }
+                          }
                         }}
                         activeOpacity={0.7}>
                         <View style={[
                           styles.calDayBg,
-                          isSelected && styles.calDayBgSelected,
-                          !isSelected && isToday && styles.calDayBgToday,
+                          isEndpoint && styles.calDayBgSelected,
+                          !isEndpoint && isToday && styles.calDayBgToday,
                         ]}>
                           <Text style={[
                             styles.calDay,
-                            isSelected && { color: '#fff', fontFamily: 'Inter_700Bold' },
-                            !isSelected && isToday && { color: Colors.primary, fontFamily: 'Inter_700Bold' },
-                            !isSelected && !isToday && isSun && { color: '#E22C29' },
-                            !isSelected && !isToday && isSat && { color: '#0052CC' },
+                            isEndpoint && { color: '#fff', fontFamily: 'Inter_700Bold' },
+                            !isEndpoint && isToday && { color: Colors.primary, fontFamily: 'Inter_700Bold' },
+                            !isEndpoint && !isToday && isSun && { color: '#E22C29' },
+                            !isEndpoint && !isToday && isSat && { color: '#0052CC' },
+                            !!inRange && { color: Colors.primary, fontFamily: 'Inter_600SemiBold' },
                           ]}>{day}</Text>
                         </View>
-                        {hasDot && !isSelected && <View style={styles.calDot} />}
-                        {hasDot && isSelected && <View style={[styles.calDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />}
+                        {hasDot && !isEndpoint && <View style={[styles.calDot, inRange ? { backgroundColor: Colors.primary } : undefined]} />}
+                        {hasDot && isEndpoint && <View style={[styles.calDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />}
                       </TouchableOpacity>
                     );
                   })}
@@ -513,12 +574,12 @@ export default function Home() {
               ));
             })()}
 
-            {/* 선택된 날짜 초기화 */}
-            {selectedDate && (
+            {/* 초기화 버튼 */}
+            {(rangeStart || dateFilter !== 'all') && (
               <TouchableOpacity style={styles.clearDateBtn}
-                onPress={() => { setSelectedDate(null); setDateFilter('all'); setShowDatePicker(false); }}>
+                onPress={() => { setRangeStart(null); setRangeEnd(null); setDateFilter('all'); setShowDatePicker(false); }}>
                 <Feather name="x-circle" size={14} color={Colors.textTertiary} />
-                <Text style={styles.clearDateText}>날짜 선택 초기화</Text>
+                <Text style={styles.clearDateText}>날짜 필터 초기화</Text>
               </TouchableOpacity>
             )}
           </Pressable>
@@ -787,6 +848,19 @@ const styles = StyleSheet.create({
   /* 날짜 초기화 */
   clearDateBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 14, padding: 8 },
   clearDateText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary },
+
+  /* 날짜 범위 상태 바 */
+  rangeStatusBar: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 16 },
+  rangeStatusBox: { flex: 1, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 10 },
+  rangeStatusBoxFilled: { borderColor: Colors.primary, backgroundColor: Colors.primaryBg },
+  rangeStatusLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, marginBottom: 4 },
+  rangeStatusDate: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.textSecondary },
+  rangeStatusDateFilled: { color: Colors.primary },
+
+  /* 범위 하이라이트 */
+  rangeMid: { backgroundColor: 'rgba(91,53,181,0.08)' },
+  rangeEdgeLeft: { backgroundColor: 'rgba(91,53,181,0.08)', borderTopLeftRadius: 20, borderBottomLeftRadius: 20 },
+  rangeEdgeRight: { backgroundColor: 'rgba(91,53,181,0.08)', borderTopRightRadius: 20, borderBottomRightRadius: 20 },
 
   /* 폴더 탭 */
   folderTabsScroll: { marginBottom: 10, marginHorizontal: -16 },
