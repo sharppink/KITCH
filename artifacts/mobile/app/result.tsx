@@ -465,14 +465,14 @@ export default function ResultScreen() {
           </Card>
           )}
 
-          {/* 시장 맥락 — 관련 추천 뉴스 */}
+          {/* 추천 뉴스 */}
           {!cannotAnalyze && (result.sectorTags?.length ?? 0) > 0 && (
           <Card style={styles.contextCard}>
             <View style={styles.cardTitleRow}>
-              <LinearGradient colors={['#0F766E', '#0D9488']} style={styles.cardTitleIcon}>
-                <Feather name="globe" size={13} color="#fff" />
+              <LinearGradient colors={['#1D4ED8', '#2563EB']} style={styles.cardTitleIcon}>
+                <Feather name="rss" size={13} color="#fff" />
               </LinearGradient>
-              <Text style={styles.cardTitle}>시장 맥락</Text>
+              <Text style={styles.cardTitle}>추천 뉴스</Text>
             </View>
 
             {/* 섹터 태그 */}
@@ -826,14 +826,14 @@ const styles = StyleSheet.create({
     flex: 1, fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary,
   },
 
-  /* 시장 맥락 카드 */
+  /* 추천 뉴스 카드 */
   contextCard: { gap: 10 },
   sectorTagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   sectorTag: {
-    backgroundColor: '#0F766E18', borderWidth: 1, borderColor: '#0F766E30',
+    backgroundColor: '#1D4ED818', borderWidth: 1, borderColor: '#1D4ED830',
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
   },
-  sectorTagText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#0F766E' },
+  sectorTagText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#1D4ED8' },
 
   /* 뉴스 리스트 */
   newsLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
