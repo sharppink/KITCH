@@ -320,7 +320,7 @@ export default function Home() {
                     <TouchableOpacity key={folder.id}
                       style={[styles.folderTab, isActive && styles.folderTabActive]}
                       onPress={() => setActiveFolder(isActive ? null : folder.id)} activeOpacity={0.75}>
-                      <Text style={styles.folderTabEmoji}>{folder.emoji}</Text>
+                      <Text style={styles.folderTabEmoji}>📁</Text>
                       <Text style={[styles.folderTabText, isActive && styles.folderTabTextActive]}>{folder.name}</Text>
                       {count > 0 && (
                         <View style={[styles.folderTabBadge, isActive && styles.folderTabBadgeActive]}>
@@ -569,7 +569,7 @@ export default function Home() {
                   const count = history.filter((h) => h.folderId === folder.id).length;
                   return (
                     <View key={folder.id} style={styles.folderMgrRow}>
-                      <Text style={styles.folderMgrEmoji}>{folder.emoji}</Text>
+                      <Text style={styles.folderMgrEmoji}>📁</Text>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.folderMgrName}>{folder.name}</Text>
                         <Text style={styles.folderMgrCount}>{count}개 기록</Text>
@@ -645,7 +645,7 @@ export default function Home() {
               <TouchableOpacity key={folder.id}
                 style={[styles.folderOption, assignTarget?.folderId === folder.id && styles.folderOptionActive]}
                 onPress={() => handleAssignFolder(folder.id)} activeOpacity={0.75}>
-                <Text style={styles.folderOptionEmoji}>{folder.emoji}</Text>
+                <Text style={styles.folderOptionEmoji}>📁</Text>
                 <Text style={styles.folderOptionName}>{folder.name}</Text>
                 {assignTarget?.folderId === folder.id && <Feather name="check" size={16} color={Colors.primary} />}
               </TouchableOpacity>
