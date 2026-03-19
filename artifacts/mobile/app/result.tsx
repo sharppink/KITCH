@@ -29,7 +29,6 @@ import { SentimentBadge } from '@/components/SentimentBadge';
 import { StockPriceSheet } from '@/components/StockPriceSheet';
 import { StockPriceRow } from '@/components/StockPriceRow';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
-import { useFolders } from '@/hooks/useFolders';
 import { AnalysisResult, StockRecommendation } from '@/services/aiAnalysis';
 import { fetchSectorNews, formatNewsAge, NewsItem } from '@/services/sectorNews';
 import {
@@ -43,19 +42,15 @@ import {
 export default function ResultScreen() {
   const insets = useSafeAreaInsets();
   const { historyId } = useLocalSearchParams<{ historyId: string }>();
-  const { history, updateMemo, updateFolder } = useAnalysisHistory();
-  const { folders, addFolder } = useFolders();
+  const { history, updateMemo } = useAnalysisHistory();
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
-  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
   const [memo, setMemo] = useState('');
   const [relatedNews, setRelatedNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockRecommendation | null>(null);
   const [showStockSheet, setShowStockSheet] = useState(false);
-  const [showFolderSheet, setShowFolderSheet] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [showCredInfo, setShowCredInfo] = useState(false);
   const [showSentimentInfo, setShowSentimentInfo] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -72,7 +67,6 @@ export default function ResultScreen() {
         setResult(item.result);
         setInputUrl(item.inputUrl);
         setMemo(item.memo ?? '');
-        setCurrentFolderId(item.folderId);
         Animated.parallel([
           Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
           Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
@@ -190,20 +184,6 @@ export default function ResultScreen() {
               </TouchableOpacity>
             )}
 
-            {/* 폴더에 추가 버튼 */}
-            <TouchableOpacity
-              style={styles.folderAddBtn}
-              onPress={() => setShowFolderSheet(true)}
-              activeOpacity={0.75}
-            >
-              <Feather name="folder-plus" size={14} color={Colors.textSecondary} />
-              <Text style={styles.folderAddText}>
-                {currentFolderId
-                  ? `📁 ${folders.find(f => f.id === currentFolderId)?.name ?? '폴더'}`
-                  : '폴더에 추가'}
-              </Text>
-              <Feather name="chevron-right" size={13} color={Colors.textTertiary} />
-            </TouchableOpacity>
           </Card>
 
           {/* 신뢰도 점수 */}
@@ -619,94 +599,6 @@ export default function ResultScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
-      {/* 폴더 선택 바텀시트 */}
-      <Modal visible={showFolderSheet} transparent animationType="slide" onRequestClose={() => setShowFolderSheet(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <Pressable style={styles.modalOverlay} onPress={() => setShowFolderSheet(false)}>
-            <Pressable style={styles.folderSheet} onPress={() => {}}>
-              <View style={styles.detailModalHandle} />
-              <View style={styles.folderSheetHeader}>
-                <View style={styles.cardTitleRow}>
-                  <Feather name="folder" size={17} color={Colors.primary} />
-                  <Text style={styles.folderSheetTitle}>폴더 선택</Text>
-                </View>
-                <TouchableOpacity onPress={() => setShowFolderSheet(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Feather name="x" size={20} color={Colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              {/* 폴더 없음 옵션 */}
-              <TouchableOpacity
-                style={[styles.folderOption, !currentFolderId && styles.folderOptionActive]}
-                onPress={async () => {
-                  if (historyId) {
-                    await updateFolder(historyId, undefined);
-                    setCurrentFolderId(undefined);
-                  }
-                  setShowFolderSheet(false);
-                }}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.folderOptionEmoji}>📋</Text>
-                <Text style={styles.folderOptionName}>분류 없음</Text>
-                {!currentFolderId && <Feather name="check" size={16} color={Colors.primary} />}
-              </TouchableOpacity>
-
-              {/* 기존 폴더 목록 */}
-              {folders.map((folder) => (
-                <TouchableOpacity
-                  key={folder.id}
-                  style={[styles.folderOption, currentFolderId === folder.id && styles.folderOptionActive]}
-                  onPress={async () => {
-                    if (historyId) {
-                      await updateFolder(historyId, folder.id);
-                      setCurrentFolderId(folder.id);
-                    }
-                    setShowFolderSheet(false);
-                  }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.folderOptionEmoji}>{folder.emoji}</Text>
-                  <Text style={styles.folderOptionName}>{folder.name}</Text>
-                  {currentFolderId === folder.id && <Feather name="check" size={16} color={Colors.primary} />}
-                </TouchableOpacity>
-              ))}
-
-              {/* 새 폴더 만들기 */}
-              <View style={styles.newFolderRow}>
-                <TextInput
-                  style={styles.newFolderInput}
-                  value={newFolderName}
-                  onChangeText={setNewFolderName}
-                  placeholder="새 폴더 이름..."
-                  placeholderTextColor={Colors.textTertiary}
-                  maxLength={20}
-                  returnKeyType="done"
-                />
-                <TouchableOpacity
-                  style={[styles.newFolderBtn, !newFolderName.trim() && { opacity: 0.4 }]}
-                  disabled={!newFolderName.trim()}
-                  activeOpacity={0.8}
-                  onPress={async () => {
-                    if (!newFolderName.trim()) return;
-                    const folder = await addFolder(newFolderName.trim());
-                    if (historyId) {
-                      await updateFolder(historyId, folder.id);
-                      setCurrentFolderId(folder.id);
-                    }
-                    setNewFolderName('');
-                    setShowFolderSheet(false);
-                  }}
-                >
-                  <Feather name="plus" size={16} color="#fff" />
-                  <Text style={styles.newFolderBtnText}>만들기</Text>
-                </TouchableOpacity>
-              </View>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
-
       <StockPriceSheet
         stock={selectedStock}
         visible={showStockSheet}

@@ -12,53 +12,39 @@ interface HistoryCardProps {
   item: HistoryItem;
   onPress: () => void;
   onDelete: () => void;
+  onFolderPress?: () => void;
+  currentFolderName?: string;
   highlightKeyword?: string;
 }
 
 function HighlightText({
-  text,
-  keyword,
-  style,
-  highlightStyle,
-  numberOfLines,
+  text, keyword, style, numberOfLines,
 }: {
-  text: string;
-  keyword?: string;
-  style: any;
-  highlightStyle?: any;
-  numberOfLines?: number;
+  text: string; keyword?: string; style: any; numberOfLines?: number;
 }) {
-  if (!keyword || !text) {
-    return <Text style={style} numberOfLines={numberOfLines}>{text}</Text>;
-  }
+  if (!keyword || !text) return <Text style={style} numberOfLines={numberOfLines}>{text}</Text>;
   const lower = text.toLowerCase();
-  const kw = keyword.toLowerCase();
+  const kw    = keyword.toLowerCase();
   const parts: React.ReactNode[] = [];
   let cursor = 0;
-  let idx = lower.indexOf(kw, cursor);
+  let idx    = lower.indexOf(kw, cursor);
   while (idx !== -1) {
     if (idx > cursor) parts.push(text.slice(cursor, idx));
     parts.push(
-      <Text key={idx} style={[style, highlightStyle ?? styles.highlight]}>
-        {text.slice(idx, idx + kw.length)}
-      </Text>
+      <Text key={idx} style={[style, styles.highlight]}>{text.slice(idx, idx + kw.length)}</Text>
     );
     cursor = idx + kw.length;
-    idx = lower.indexOf(kw, cursor);
+    idx    = lower.indexOf(kw, cursor);
   }
   if (cursor < text.length) parts.push(text.slice(cursor));
-  return (
-    <Text style={style} numberOfLines={numberOfLines}>
-      {parts}
-    </Text>
-  );
+  return <Text style={style} numberOfLines={numberOfLines}>{parts}</Text>;
 }
 
-export function HistoryCard({ item, onPress, onDelete, highlightKeyword }: HistoryCardProps) {
+export function HistoryCard({ item, onPress, onDelete, onFolderPress, currentFolderName, highlightKeyword }: HistoryCardProps) {
   const { result } = item;
-  const typeInfo = getContentTypeIcon(result.contentType);
+  const typeInfo      = getContentTypeIcon(result.contentType);
   const sentimentColor = getSentimentColor(result.sentiment);
-  const credColor = getCredibilityColor(result.credibilityScore);
+  const credColor      = getCredibilityColor(result.credibilityScore);
 
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -79,18 +65,8 @@ export function HistoryCard({ item, onPress, onDelete, highlightKeyword }: Histo
           <Text style={styles.date}>{formatDate(new Date(result.analyzedAt))}</Text>
         </View>
 
-        <HighlightText
-          text={result.sourceTitle ?? ''}
-          keyword={highlightKeyword}
-          style={styles.title}
-          numberOfLines={1}
-        />
-        <HighlightText
-          text={summary}
-          keyword={highlightKeyword}
-          style={styles.summary}
-          numberOfLines={2}
-        />
+        <HighlightText text={result.sourceTitle ?? ''} keyword={highlightKeyword} style={styles.title} numberOfLines={1} />
+        <HighlightText text={summary} keyword={highlightKeyword} style={styles.summary} numberOfLines={2} />
 
         {/* 메모 미리보기 */}
         {!!item.memo && (
@@ -106,10 +82,26 @@ export function HistoryCard({ item, onPress, onDelete, highlightKeyword }: Histo
             <Text style={styles.scoreLabel}> 신뢰도</Text>
           </View>
           <View style={styles.stocks}>
-            {(result.recommendedStocks ?? []).slice(0, 3).map((s) => (
+            {(result.recommendedStocks ?? []).slice(0, 2).map((s) => (
               <StockTagCompact key={s.ticker} stock={s} />
             ))}
           </View>
+
+          {/* 폴더 지정 버튼 */}
+          {onFolderPress && (
+            <TouchableOpacity
+              style={[styles.folderBtn, currentFolderName && styles.folderBtnActive]}
+              onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); onFolderPress(); }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              activeOpacity={0.7}
+            >
+              <Feather name="folder" size={12} color={currentFolderName ? Colors.primary : Colors.textTertiary} />
+              {currentFolderName ? (
+                <Text style={styles.folderBtnText} numberOfLines={1}>{currentFolderName}</Text>
+              ) : null}
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Feather name="trash-2" size={14} color={Colors.textTertiary} />
           </TouchableOpacity>
@@ -121,13 +113,9 @@ export function HistoryCard({ item, onPress, onDelete, highlightKeyword }: Histo
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-    marginBottom: 10,
+    flexDirection: 'row', backgroundColor: Colors.surface,
+    borderRadius: 14, borderWidth: 1, borderColor: Colors.border,
+    overflow: 'hidden', marginBottom: 10,
   },
   stripe: { width: 4 },
   content: { flex: 1, padding: 14, gap: 6 },
@@ -141,16 +129,21 @@ const styles = StyleSheet.create({
   memoPreview: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: Colors.primaryBg, borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 4,
-    alignSelf: 'flex-start', maxWidth: '100%',
+    paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start', maxWidth: '100%',
   },
-  memoPreviewText: {
-    fontFamily: 'Inter_400Regular', fontSize: 11,
-    color: Colors.primary, flex: 1,
-  },
+  memoPreviewText: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.primary, flex: 1 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   scoreRow: { flexDirection: 'row', alignItems: 'baseline' },
   score: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   scoreLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
   stocks: { flex: 1, flexDirection: 'row', gap: 4, flexWrap: 'nowrap' },
+
+  /* 폴더 버튼 */
+  folderBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4,
+    borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background,
+  },
+  folderBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryBg },
+  folderBtnText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.primary, maxWidth: 60 },
 });
