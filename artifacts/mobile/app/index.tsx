@@ -16,6 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
@@ -68,6 +69,10 @@ export default function Home() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [calMonth, setCalMonth]             = useState(() => new Date());
   const [activeFolder, setActiveFolder]     = useState<string | null>(null);
+
+  /* 알림 시트 */
+  const [showAlarmSheet, setShowAlarmSheet] = useState(false);
+  const [alarmEnabled, setAlarmEnabled]     = useState(false);
 
   /* 폴더 관리 시트 */
   const [showFolderManager, setShowFolderManager] = useState(false);
@@ -213,8 +218,12 @@ export default function Home() {
         <Text style={styles.headerTitle}>KITCH</Text>
 
         {/* 오른쪽: 알림 */}
-        <TouchableOpacity style={styles.bellBtn}>
-          <Feather name="bell" size={18} color="rgba(255,255,255,0.7)" />
+        <TouchableOpacity style={[styles.bellBtn, alarmEnabled && styles.bellBtnActive]}
+          onPress={() => { Haptics.selectionAsync(); setShowAlarmSheet(true); }}
+          activeOpacity={0.75}>
+          <Feather name={alarmEnabled ? 'bell' : 'bell-off'} size={18}
+            color={alarmEnabled ? '#FFD700' : 'rgba(255,255,255,0.5)'} />
+          {alarmEnabled && <View style={styles.bellActiveDot} />}
         </TouchableOpacity>
       </View>
 
@@ -586,6 +595,71 @@ export default function Home() {
         </Pressable>
       </Modal>
 
+      {/* ── 알림 설정 시트 ── */}
+      <Modal visible={showAlarmSheet} transparent animationType="slide"
+        onRequestClose={() => setShowAlarmSheet(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowAlarmSheet(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetTitleRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Feather name="bell" size={18} color={Colors.primary} />
+                <Text style={styles.sheetTitle}>종목 변동 알림</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAlarmSheet(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name="x" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 설명 영역 */}
+            <View style={styles.alarmDescBox}>
+              <View style={styles.alarmDescIconRow}>
+                <View style={styles.alarmDescIconBg}>
+                  <Text style={{ fontSize: 26 }}>📈</Text>
+                </View>
+              </View>
+              <Text style={styles.alarmDescTitle}>내 기사와 관련된 종목을 실시간으로 감시합니다</Text>
+              <View style={styles.alarmDescItems}>
+                {[
+                  { icon: 'trending-up', text: '저장한 기사에서 추출된 관련 종목을 추적합니다' },
+                  { icon: 'alert-circle', text: '주가 변동이 ±5% 이상일 때 즉시 알림을 보냅니다' },
+                  { icon: 'star', text: '관련도 "높음"으로 분류된 종목을 우선 감시합니다' },
+                ].map((item, i) => (
+                  <View key={i} style={styles.alarmDescItem}>
+                    <Feather name={item.icon as any} size={14} color={Colors.primary} style={{ marginTop: 1 }} />
+                    <Text style={styles.alarmDescItemText}>{item.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* ON / OFF 토글 */}
+            <View style={[styles.alarmToggleRow, alarmEnabled && styles.alarmToggleRowOn]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.alarmToggleLabel}>
+                  {alarmEnabled ? '알림 켜짐 🔔' : '알림 꺼짐 🔕'}
+                </Text>
+                <Text style={styles.alarmToggleDesc}>
+                  {alarmEnabled
+                    ? '관련 종목에 큰 변동이 생기면 알려드립니다'
+                    : '알림을 켜면 종목 변동을 바로 확인할 수 있습니다'}
+                </Text>
+              </View>
+              <Switch
+                value={alarmEnabled}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setAlarmEnabled(v);
+                }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ── 폴더 관리 시트 ── */}
       <Modal visible={showFolderManager} transparent animationType="slide"
         onRequestClose={() => setShowFolderManager(false)}>
@@ -775,6 +849,50 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
+  },
+  bellBtnActive: {
+    backgroundColor: 'rgba(255,215,0,0.18)',
+    borderColor: 'rgba(255,215,0,0.5)',
+  },
+  bellActiveDot: {
+    position: 'absolute', top: 6, right: 6,
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: '#FFD700',
+    borderWidth: 1.5, borderColor: '#12146A',
+  },
+
+  /* 알림 설정 시트 */
+  alarmDescBox: {
+    backgroundColor: Colors.background, borderRadius: 14,
+    padding: 16, marginBottom: 16, gap: 10,
+  },
+  alarmDescIconRow: { alignItems: 'center', marginBottom: 4 },
+  alarmDescIconBg: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: Colors.primaryBg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  alarmDescTitle: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 14,
+    color: Colors.text, textAlign: 'center', lineHeight: 20,
+  },
+  alarmDescItems: { gap: 10, marginTop: 4 },
+  alarmDescItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  alarmDescItemText: {
+    flex: 1, fontFamily: 'Inter_400Regular',
+    fontSize: 13, color: Colors.textSecondary, lineHeight: 18,
+  },
+  alarmToggleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: Colors.surface, borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  alarmToggleRowOn: { borderColor: Colors.primary, backgroundColor: Colors.primaryBg },
+  alarmToggleLabel: {
+    fontFamily: 'Inter_700Bold', fontSize: 15, color: Colors.text,
+  },
+  alarmToggleDesc: {
+    fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary,
   },
 
   emptyScroll: { paddingHorizontal: 20, paddingTop: 20 },
