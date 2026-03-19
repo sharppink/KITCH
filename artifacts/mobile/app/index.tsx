@@ -1,273 +1,286 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
-  ScrollView, StatusBar, StyleSheet, Text,
-  TouchableOpacity, View,
+  Image, ScrollView, StatusBar, StyleSheet,
+  Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Colors from '@/constants/colors';
+import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
+import { HistoryCard } from '@/components/HistoryCard';
+import { HistoryItem } from '@/hooks/useAnalysisHistory';
 
-const STOCKS = [
-  { rank: 1, name: '지투지바이오',    price: '102,400', change: '▼ 13.80%', up: false },
-  { rank: 2, name: '삼성전자',        price: '187,500', change: '▲ 2.18%',  up: true  },
-  { rank: 3, name: 'SK하이닉스',      price: '959,000', change: '▲ 5.38%',  up: true  },
-  { rank: 4, name: '흥아해운',        price: '3,015',   change: '▲ 29.12%', up: true  },
-  { rank: 5, name: '카나프테라퓨틱스', price: '57,700',  change: '▲ 188.5%', up: true  },
+const QUICK_ACTIONS = [
+  {
+    type: 'news',
+    icon: 'link' as const,
+    label: '뉴스 기사',
+    color: Colors.primary,
+    bg: Colors.primaryBg,
+  },
+  {
+    type: 'screenshot',
+    icon: 'image' as const,
+    label: '스크린샷',
+    color: '#7C3AED',
+    bg: '#F3EEFF',
+  },
+  {
+    type: 'youtube',
+    icon: 'youtube' as const,
+    label: '유튜브',
+    color: '#EF4444',
+    bg: '#FFF0F0',
+  },
 ];
 
-const TAGS = ['#지투지바이오', '#삼성전자', '#SK하이닉스', '#흥아'];
-
-const BIG_DATA_TABS = ['실시간 조회', '조회수 급증', '매매 상위'];
-const MAIN_TABS = ['국내', '해외', '상품'];
-
-export default function KiwoomHome() {
+export default function Home() {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState('실시간 조회');
-  const [mainTab, setMainTab] = useState('국내');
+  const { history, deleteFromHistory } = useAnalysisHistory();
+
+  const handleViewResult = (item: HistoryItem) => {
+    router.push({ pathname: '/result', params: { historyId: item.id, cached: 'true' } });
+  };
+
+  const handleQuickAnalyze = (type: string) => {
+    router.push({ pathname: '/input', params: { type } });
+  };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#12146A" />
 
-      {/* ── 헤더 ── */}
-      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-        {/* 왼쪽: 뒤로 + 모드 토글 */}
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.backBtn}>
-            <Feather name="chevron-left" size={20} color="#1A1A2E" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modePill}>
-            <Text style={styles.modePillText}>일반</Text>
-          </TouchableOpacity>
-          <Text style={styles.modePlain}>간편</Text>
-        </View>
-
-        {/* 오른쪽: 이벤트 배너 */}
-        <TouchableOpacity style={styles.eventBanner}>
-          <View>
-            <Text style={styles.eventSmall}>휴면고객 초대 이벤트</Text>
-            <Text style={styles.eventBig}>친구야 다시{'\n'}키움하자!</Text>
-          </View>
-          <Text style={styles.eventEmoji}>🐾</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.moreBtn}>
-          <Feather name="more-vertical" size={18} color="#64647A" />
+      {/* 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Image
+          source={require('@/assets/images/kitch-logo-transparent.png')}
+          style={styles.logo}
+          tintColor="#FFFFFF"
+          resizeMode="contain"
+        />
+        <TouchableOpacity style={styles.bellBtn}>
+          <Feather name="bell" size={18} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
       </View>
 
-      {/* ── 국내/해외/상품 탭 ── */}
-      <View style={styles.mainTabs}>
-        {MAIN_TABS.map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.mainTab, mainTab === t && styles.mainTabActive]}
-            onPress={() => setMainTab(t)}
-          >
-            <Text style={[styles.mainTabText, mainTab === t && styles.mainTabTextActive]}>{t}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 70 }}>
-
-        {/* ── 검색바 ── */}
-        <View style={styles.searchBar}>
-          <Feather name="search" size={15} color="#B0B0C0" />
-          <Text style={styles.searchPlaceholder}>종목·메뉴를 검색해주세요</Text>
-          <Feather name="mic" size={15} color="#B0B0C0" />
-        </View>
-
-        {/* ── 해시태그 ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={styles.tagRow} contentContainerStyle={{ paddingHorizontal: 14, gap: 6 }}>
-          {TAGS.map(tag => (
-            <TouchableOpacity key={tag} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
+      {/* 빠른 분석 진입 */}
+      <View style={styles.quickBar}>
+        <Text style={styles.quickBarLabel}>분석 유형 선택</Text>
+        <View style={styles.quickActions}>
+          {QUICK_ACTIONS.map((action) => (
+            <TouchableOpacity
+              key={action.type}
+              style={[styles.quickBtn, { backgroundColor: action.bg, borderColor: action.color + '33' }]}
+              activeOpacity={0.75}
+              onPress={() => handleQuickAnalyze(action.type)}
+            >
+              <Feather name={action.icon} size={16} color={action.color} />
+              <Text style={[styles.quickBtnText, { color: action.color }]}>{action.label}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
+      </View>
 
-        {/* ── 포인트 배너 ── */}
-        <TouchableOpacity style={styles.pointBanner} activeOpacity={0.85}>
-          <Text style={styles.pointBannerText}>[키움포인트] 주식살때 보태드려요!</Text>
-        </TouchableOpacity>
-
-        {/* ── 빅데이터 ── */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>빅데이터</Text>
-            <View style={styles.cardActions}>
-              <Feather name="refresh-cw" size={13} color="#9898A8" />
-              <Feather name="chevron-right" size={13} color="#9898A8" style={{ marginLeft: 10 }} />
-            </View>
-          </View>
-
-          {/* 필터 탭 */}
-          <View style={styles.filterRow}>
-            {BIG_DATA_TABS.map(t => (
-              <TouchableOpacity
-                key={t}
-                style={[styles.filterBtn, activeTab === t && styles.filterBtnActive]}
-                onPress={() => setActiveTab(t)}
-              >
-                <Text style={[styles.filterBtnText, activeTab === t && styles.filterBtnTextActive]}>
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* 종목 목록 */}
-          {STOCKS.map(s => (
-            <View key={s.rank} style={styles.stockRow}>
-              <Text style={styles.stockRank}>{s.rank}</Text>
-              <Text style={styles.stockName}>{s.name}</Text>
-              <Text style={styles.stockPrice}>{s.price}</Text>
-              <Text style={[styles.stockChange, { color: s.up ? '#E22C29' : '#0052CC' }]}>
-                {s.up ? '▲' : '▼'} {s.change.replace('▲ ', '').replace('▼ ', '')}
+      {/* 콘텐츠 */}
+      <View style={{ flex: 1 }}>
+        {history.length === 0 ? (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.emptyScroll, { paddingBottom: 100 }]}
+          >
+            {/* 환영 배너 */}
+            <View style={styles.heroBanner}>
+              <View style={styles.heroIconRow}>
+                <View style={[styles.heroIcon, { backgroundColor: '#EEF0FF' }]}>
+                  <Feather name="cpu" size={22} color={Colors.primary} />
+                </View>
+              </View>
+              <Text style={styles.heroTitle}>AI가 투자 정보를 분석해드려요</Text>
+              <Text style={styles.heroSubtitle}>
+                뉴스 기사, 스크린샷, 유튜브 영상 링크를{'\n'}붙여넣으면 신뢰도·종목·투자 심리를{'\n'}자동으로 분석합니다.
               </Text>
             </View>
-          ))}
-        </View>
 
-        {/* ── 순위 검색 ── */}
-        <View style={styles.indexSection}>
-          <Text style={styles.indexSectionTitle}>순위 검색</Text>
-          <View style={styles.indexRow}>
-            <View style={styles.indexBadge}>
-              <Text style={styles.indexBadgeText}>지수</Text>
+            {/* 사용 방법 */}
+            <Text style={styles.howTitle}>이렇게 사용하세요</Text>
+            <View style={styles.stepList}>
+              {[
+                { icon: 'link' as const, type: 'news', title: '뉴스 기사 URL 붙여넣기', desc: '한국경제, 연합뉴스, Bloomberg 등 기사 주소', bg: Colors.primaryBg, color: Colors.primary },
+                { icon: 'image' as const, type: 'screenshot', title: '스크린샷 업로드', desc: '실적표, 리포트, 차트 이미지를 바로 분석', bg: '#F3EEFF', color: '#7C3AED' },
+                { icon: 'youtube' as const, type: 'youtube', title: '유튜브 링크 붙여넣기', desc: '투자 분석 영상의 요약·신뢰도를 한 번에', bg: '#FFF0F0', color: '#EF4444' },
+              ].map((s, i, arr) => (
+                <TouchableOpacity
+                  key={s.type}
+                  style={[styles.stepRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
+                  activeOpacity={0.75}
+                  onPress={() => handleQuickAnalyze(s.type)}
+                >
+                  <View style={[styles.stepIconBg, { backgroundColor: s.bg }]}>
+                    <Feather name={s.icon} size={18} color={s.color} />
+                  </View>
+                  <View style={styles.stepText}>
+                    <Text style={styles.stepTitle}>{s.title}</Text>
+                    <Text style={styles.stepDesc}>{s.desc}</Text>
+                  </View>
+                  <Feather name="chevron-right" size={16} color={Colors.textTertiary} />
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text style={styles.indexName}>코스닥</Text>
-            <Text style={styles.indexValue}>1,133.79</Text>
-            <Text style={[styles.indexChange, { color: '#0052CC' }]}>▼ 19.17</Text>
-            <Text style={[styles.indexChangePct, { color: '#0052CC' }]}>1.66%</Text>
-          </View>
-        </View>
-      </ScrollView>
 
+            <View style={styles.historyHint}>
+              <Feather name="clock" size={13} color={Colors.textTertiary} />
+              <Text style={styles.historyHintText}>분석이 완료되면 이 화면에 기록이 저장됩니다</Text>
+            </View>
+          </ScrollView>
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scroll, { paddingBottom: 80 }]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>내 분석 기록</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{history.length}</Text>
+              </View>
+            </View>
+            {history.map((item) => (
+              <HistoryCard
+                key={item.id}
+                item={item}
+                onPress={() => handleViewResult(item)}
+                onDelete={() => deleteFromHistory(item.id)}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* 분석 시작하기 버튼 */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          style={styles.fab}
+          activeOpacity={0.85}
+          onPress={() => router.push('/analyze-sheet')}
+        >
+          <Feather name="zap" size={17} color="#fff" />
+          <Text style={styles.fabText}>분석 시작하기</Text>
+        </TouchableOpacity>
+      </View>
       <KiwoomBottomBar />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: Colors.background },
 
-  /* 헤더 */
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingBottom: 8,
+    paddingHorizontal: 16, paddingBottom: 12,
+    backgroundColor: '#12146A',
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  backBtn: { paddingRight: 2 },
-  modePill: {
-    backgroundColor: '#5B35B5', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12,
+  logo: { flex: 1, height: 36 },
+  bellBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  modePillText: { fontSize: 12, color: '#fff', fontWeight: '700' },
-  modePlain: { fontSize: 12, color: '#64647A', fontWeight: '500' },
 
-  eventBanner: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
-    backgroundColor: '#FFF5E6', borderRadius: 8, marginLeft: 8,
-    paddingHorizontal: 10, paddingVertical: 6,
+  quickBar: {
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    gap: 10,
   },
-  eventSmall: { fontSize: 9, color: '#E07020', fontWeight: '600' },
-  eventBig:  { fontSize: 12, color: '#1A1A2E', fontWeight: '800', lineHeight: 16 },
-  eventEmoji: { fontSize: 20, marginLeft: 4 },
-  moreBtn: { paddingLeft: 10 },
+  quickBarLabel: {
+    fontFamily: 'Inter_500Medium', fontSize: 11,
+    color: Colors.textTertiary, letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  quickActions: { flexDirection: 'row', gap: 8 },
+  quickBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 12,
+    borderWidth: 1,
+  },
+  quickBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
 
-  /* 메인 탭 */
-  mainTabs: {
-    flexDirection: 'row',
-    borderBottomWidth: 1, borderBottomColor: '#E8E8F0',
-  },
-  mainTab: { paddingHorizontal: 22, paddingVertical: 10 },
-  mainTabActive: { borderBottomWidth: 2, borderBottomColor: '#1A1A2E' },
-  mainTabText: { fontSize: 14, color: '#9898A8', fontWeight: '500' },
-  mainTabTextActive: { color: '#1A1A2E', fontWeight: '700' },
+  emptyScroll: { paddingHorizontal: 20, paddingTop: 20 },
 
-  /* 검색바 */
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 14, marginTop: 12, marginBottom: 4,
-    backgroundColor: '#F5F5FA', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 9,
+  heroBanner: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20, padding: 24,
+    alignItems: 'center', gap: 10,
+    borderWidth: 1, borderColor: Colors.border,
+    marginBottom: 24,
   },
-  searchPlaceholder: { flex: 1, fontSize: 13, color: '#B0B0C0' },
+  heroIconRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
+  heroIcon: {
+    width: 52, height: 52, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroTitle: {
+    fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text,
+    textAlign: 'center', lineHeight: 24,
+  },
+  heroSubtitle: {
+    fontFamily: 'Inter_400Regular', fontSize: 13,
+    color: Colors.textSecondary, textAlign: 'center', lineHeight: 21,
+  },
 
-  /* 해시태그 */
-  tagRow: { marginVertical: 8 },
-  tag: {
-    backgroundColor: '#F0EBFF', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 12,
+  howTitle: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 13,
+    color: Colors.textSecondary, marginBottom: 10,
+    letterSpacing: 0.3,
   },
-  tagText: { fontSize: 12, color: '#5B35B5', fontWeight: '500' },
+  stepList: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
+    overflow: 'hidden', marginBottom: 16,
+  },
+  stepRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  stepIconBg: {
+    width: 42, height: 42, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepText: { flex: 1, gap: 2 },
+  stepTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text },
+  stepDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
 
-  /* 포인트 배너 */
-  pointBanner: {
-    marginHorizontal: 14, marginBottom: 14,
-    backgroundColor: '#12146A', borderRadius: 6,
-    paddingVertical: 11, paddingHorizontal: 14,
+  historyHint: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 8,
   },
-  pointBannerText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  historyHintText: {
+    fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary,
+  },
 
-  /* 빅데이터 카드 */
-  card: { marginHorizontal: 14, marginBottom: 12 },
-  cardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 10,
+  scroll: { paddingHorizontal: 16, paddingTop: 16 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: Colors.text },
+  badge: {
+    backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A2E' },
-  cardActions: { flexDirection: 'row', alignItems: 'center' },
+  badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
 
-  filterRow: { flexDirection: 'row', gap: 4, marginBottom: 12 },
-  filterBtn: {
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4,
-    backgroundColor: '#F5F5FA',
+  fabContainer: {
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: Colors.background,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
-  filterBtnActive: { backgroundColor: '#12146A' },
-  filterBtnText: { fontSize: 12, color: '#64647A', fontWeight: '500' },
-  filterBtnTextActive: { color: '#FFFFFF', fontWeight: '700' },
-
-  stockRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F0F0F8',
+  fab: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  stockRank: { width: 18, fontSize: 13, color: '#64647A', fontWeight: '600' },
-  stockName: { flex: 1, fontSize: 13, color: '#1A1A2E', fontWeight: '500', marginLeft: 6 },
-  stockPrice: { fontSize: 13, color: '#1A1A2E', fontWeight: '600', marginRight: 6 },
-  stockChange: { fontSize: 12, fontWeight: '500', width: 86, textAlign: 'right' },
-
-  /* 순위 검색 */
-  indexSection: { marginHorizontal: 14, marginBottom: 8 },
-  indexSectionTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A2E', marginBottom: 8 },
-  indexRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F5F5FA', borderRadius: 6,
-    paddingHorizontal: 10, paddingVertical: 8,
-  },
-  indexBadge: {
-    backgroundColor: '#DCEEFF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
-  },
-  indexBadgeText: { fontSize: 10, color: '#0052CC', fontWeight: '700' },
-  indexName: { flex: 1, fontSize: 13, color: '#1A1A2E', fontWeight: '500' },
-  indexValue: { fontSize: 13, color: '#1A1A2E', fontWeight: '600' },
-  indexChange: { fontSize: 12, fontWeight: '500' },
-  indexChangePct: { fontSize: 12, fontWeight: '500' },
-
-  /* 하단 탭바 */
-  tabBar: {
-    flexDirection: 'row', backgroundColor: '#FFFFFF',
-    borderTopWidth: 1, borderTopColor: '#E8E8F0', paddingTop: 6,
-  },
-  menuBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#5B35B5', marginHorizontal: 4, marginBottom: 2,
-    borderRadius: 8, paddingVertical: 4,
-  },
-  menuBtnText: { fontSize: 9, color: '#fff', fontWeight: '700', marginTop: 1 },
-  tabBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  tabBarText: { fontSize: 10, color: '#64647A' },
+  fabText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
 });

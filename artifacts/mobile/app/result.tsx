@@ -94,7 +94,7 @@ export default function ResultScreen() {
 
       {/* 헤더 — 키움 스타일 진한 남색 */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.push('/kitch-home')} style={styles.backButton} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.replace('/')} style={styles.backButton} activeOpacity={0.7}>
           <Feather name="arrow-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>분석 결과</Text>

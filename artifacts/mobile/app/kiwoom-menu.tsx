@@ -172,7 +172,7 @@ export default function KiwoomMenu() {
                     idx % 2 === 0 ? styles.gridItemLeft : styles.gridItemRight,
                     item.isKitch && styles.gridItemKitch,
                   ]}
-                  onPress={() => item.isKitch && router.push('/kitch-home')}
+                  onPress={() => item.isKitch && router.push('/')}
                   activeOpacity={item.isKitch ? 0.7 : 0.85}
                 >
                   {item.isKitch && (
