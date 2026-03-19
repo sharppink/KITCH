@@ -303,34 +303,20 @@ export default function Home() {
               </TouchableOpacity>
             </View>
 
-            {/* 폴더 탭 */}
-            {folders.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.folderTabsRow} style={styles.folderTabsScroll}>
-                <TouchableOpacity
-                  style={[styles.folderTab, activeFolder === null && styles.folderTabActive]}
-                  onPress={() => setActiveFolder(null)} activeOpacity={0.75}>
-                  <Text style={[styles.folderTabText, activeFolder === null && styles.folderTabTextActive]}>전체 폴더</Text>
-                </TouchableOpacity>
-                {folders.map((folder) => {
-                  const count    = history.filter((h) => h.folderId === folder.id).length;
-                  const isActive = activeFolder === folder.id;
-                  return (
-                    <TouchableOpacity key={folder.id}
-                      style={[styles.folderTab, isActive && styles.folderTabActive]}
-                      onPress={() => setActiveFolder(isActive ? null : folder.id)} activeOpacity={0.75}>
-                      <Text style={styles.folderTabEmoji}>📁</Text>
-                      <Text style={[styles.folderTabText, isActive && styles.folderTabTextActive]}>{folder.name}</Text>
-                      {count > 0 && (
-                        <View style={[styles.folderTabBadge, isActive && styles.folderTabBadgeActive]}>
-                          <Text style={[styles.folderTabBadgeText, isActive && styles.folderTabBadgeTextActive]}>{count}</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
+            {/* 활성 폴더 필터 표시 */}
+            {activeFolder && (() => {
+              const af = folders.find((f) => f.id === activeFolder);
+              return af ? (
+                <View style={styles.activeFolderBar}>
+                  <Text style={styles.activeFolderBarEmoji}>📁</Text>
+                  <Text style={styles.activeFolderBarName}>{af.name}</Text>
+                  <TouchableOpacity onPress={() => setActiveFolder(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Feather name="x" size={14} color={Colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              ) : null;
+            })()}
 
             {/* 검색 결과 */}
             {isSearching ? (
@@ -565,20 +551,28 @@ export default function Home() {
                 </View>
               ) : (
                 folders.map((folder) => {
-                  const count = history.filter((h) => h.folderId === folder.id).length;
+                  const count    = history.filter((h) => h.folderId === folder.id).length;
+                  const isActive = activeFolder === folder.id;
                   return (
-                    <View key={folder.id} style={styles.folderMgrRow}>
+                    <TouchableOpacity key={folder.id} style={[styles.folderMgrRow, isActive && styles.folderMgrRowActive]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setActiveFolder(isActive ? null : folder.id);
+                        setShowFolderManager(false);
+                      }}>
                       <Text style={styles.folderMgrEmoji}>📁</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.folderMgrName}>{folder.name}</Text>
+                        <Text style={[styles.folderMgrName, isActive && { color: Colors.primary }]}>{folder.name}</Text>
                         <Text style={styles.folderMgrCount}>{count}개 기록</Text>
                       </View>
+                      {isActive && <Feather name="check" size={16} color={Colors.primary} style={{ marginRight: 8 }} />}
                       <TouchableOpacity
                         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); deleteFolder(folder.id); }}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                         <Feather name="trash-2" size={16} color={Colors.textTertiary} />
                       </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               )}
@@ -835,7 +829,11 @@ const styles = StyleSheet.create({
   sheetTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text },
 
   /* 폴더 관리 */
-  folderMgrRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  folderMgrRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, borderRadius: 8 },
+  folderMgrRowActive: { backgroundColor: Colors.primaryBg },
+  activeFolderBar: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: Colors.primary, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', marginBottom: 10 },
+  activeFolderBarEmoji: { fontSize: 13 },
+  activeFolderBarName: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.primary },
   folderMgrEmoji: { fontSize: 22, width: 32, textAlign: 'center' },
   folderMgrName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
   folderMgrCount: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary },
