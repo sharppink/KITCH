@@ -46,12 +46,11 @@ function matchesKeyword(item: HistoryItem, q: string): boolean {
   const lower = q.toLowerCase();
   const r = item.result;
   return (
-    (r.title ?? '').toLowerCase().includes(lower) ||
-    (r.summary ?? '').toLowerCase().includes(lower) ||
-    (r.keyPoints ?? []).some((p) => p.toLowerCase().includes(lower)) ||
+    (r.sourceTitle ?? '').toLowerCase().includes(lower) ||
+    (r.summary ?? []).some((s) => s.toLowerCase().includes(lower)) ||
     (r.sectorTags ?? []).some((t) => t.toLowerCase().includes(lower)) ||
     (r.recommendedStocks ?? []).some(
-      (s) => s.name.toLowerCase().includes(lower) || s.ticker.toLowerCase().includes(lower)
+      (s) => (s.company ?? '').toLowerCase().includes(lower) || (s.ticker ?? '').toLowerCase().includes(lower)
     ) ||
     (item.inputUrl ?? '').toLowerCase().includes(lower)
   );
