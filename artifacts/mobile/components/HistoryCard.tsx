@@ -12,9 +12,49 @@ interface HistoryCardProps {
   item: HistoryItem;
   onPress: () => void;
   onDelete: () => void;
+  highlightKeyword?: string;
 }
 
-export function HistoryCard({ item, onPress, onDelete }: HistoryCardProps) {
+function HighlightText({
+  text,
+  keyword,
+  style,
+  highlightStyle,
+  numberOfLines,
+}: {
+  text: string;
+  keyword?: string;
+  style: any;
+  highlightStyle?: any;
+  numberOfLines?: number;
+}) {
+  if (!keyword || !text) {
+    return <Text style={style} numberOfLines={numberOfLines}>{text}</Text>;
+  }
+  const lower = text.toLowerCase();
+  const kw = keyword.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  let idx = lower.indexOf(kw, cursor);
+  while (idx !== -1) {
+    if (idx > cursor) parts.push(text.slice(cursor, idx));
+    parts.push(
+      <Text key={idx} style={[style, highlightStyle ?? styles.highlight]}>
+        {text.slice(idx, idx + kw.length)}
+      </Text>
+    );
+    cursor = idx + kw.length;
+    idx = lower.indexOf(kw, cursor);
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return (
+    <Text style={style} numberOfLines={numberOfLines}>
+      {parts}
+    </Text>
+  );
+}
+
+export function HistoryCard({ item, onPress, onDelete, highlightKeyword }: HistoryCardProps) {
   const { result } = item;
   const typeInfo = getContentTypeIcon(result.contentType);
   const sentimentColor = getSentimentColor(result.sentiment);
@@ -24,6 +64,8 @@ export function HistoryCard({ item, onPress, onDelete }: HistoryCardProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onDelete();
   };
+
+  const summary = result.summary?.[0] ?? '';
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
@@ -36,8 +78,19 @@ export function HistoryCard({ item, onPress, onDelete }: HistoryCardProps) {
           </View>
           <Text style={styles.date}>{formatDate(new Date(result.analyzedAt))}</Text>
         </View>
-        <Text style={styles.title} numberOfLines={1}>{result.sourceTitle}</Text>
-        <Text style={styles.summary} numberOfLines={2}>{result.summary?.[0] ?? ''}</Text>
+
+        <HighlightText
+          text={result.sourceTitle ?? ''}
+          keyword={highlightKeyword}
+          style={styles.title}
+          numberOfLines={1}
+        />
+        <HighlightText
+          text={summary}
+          keyword={highlightKeyword}
+          style={styles.summary}
+          numberOfLines={2}
+        />
 
         {/* 메모 미리보기 */}
         {!!item.memo && (
@@ -84,6 +137,7 @@ const styles = StyleSheet.create({
   date: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
   title: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text },
   summary: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  highlight: { backgroundColor: '#FFF0A0', color: Colors.text, fontFamily: 'Inter_600SemiBold' },
   memoPreview: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: Colors.primaryBg, borderRadius: 6,

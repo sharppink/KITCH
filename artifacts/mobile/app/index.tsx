@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
   Animated,
@@ -10,6 +11,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,15 +22,57 @@ import { useFolders } from '@/hooks/useFolders';
 import { HistoryCard } from '@/components/HistoryCard';
 import { HistoryItem } from '@/hooks/useAnalysisHistory';
 
+const DATE_FILTERS = [
+  { key: 'all',    label: '전체' },
+  { key: 'today',  label: '오늘' },
+  { key: 'week',   label: '이번 주' },
+  { key: 'month',  label: '이번 달' },
+] as const;
+type DateFilterKey = (typeof DATE_FILTERS)[number]['key'];
+
+function matchesDateFilter(item: HistoryItem, filter: DateFilterKey): boolean {
+  if (filter === 'all') return true;
+  const diff = Math.floor(
+    (Date.now() - new Date(item.savedAt).getTime()) / 86400000
+  );
+  if (filter === 'today') return diff === 0;
+  if (filter === 'week')  return diff < 7;
+  if (filter === 'month') return diff < 30;
+  return true;
+}
+
+function matchesKeyword(item: HistoryItem, q: string): boolean {
+  if (!q) return true;
+  const lower = q.toLowerCase();
+  const r = item.result;
+  return (
+    (r.title ?? '').toLowerCase().includes(lower) ||
+    (r.summary ?? '').toLowerCase().includes(lower) ||
+    (r.keyPoints ?? []).some((p) => p.toLowerCase().includes(lower)) ||
+    (r.sectorTags ?? []).some((t) => t.toLowerCase().includes(lower)) ||
+    (r.recommendedStocks ?? []).some(
+      (s) =>
+        s.name.toLowerCase().includes(lower) ||
+        s.ticker.toLowerCase().includes(lower)
+    ) ||
+    (item.inputUrl ?? '').toLowerCase().includes(lower)
+  );
+}
+
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { history, deleteFromHistory } = useAnalysisHistory();
   const { folders } = useFolders();
-  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [dateFilter, setDateFilter]       = useState<DateFilterKey>('all');
+  const [activeFolder, setActiveFolder]   = useState<string | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const showOnboarding = history.length === 0 && !onboardingDismissed;
+  const isSearching = searchQuery.trim().length > 0;
 
   useEffect(() => {
     if (showOnboarding) {
@@ -51,22 +95,40 @@ export default function Home() {
     router.push({ pathname: '/input', params: { type } });
   };
 
-  // 일자별 그룹핑 (+ 폴더 필터)
-  const groupedHistory = React.useMemo(() => {
-    const filtered = activeFolder
-      ? history.filter(item => item.folderId === activeFolder)
-      : history;
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    searchInputRef.current?.blur();
+  }, []);
+
+  // 필터 적용된 항목 (폴더 + 날짜 + 키워드)
+  const filteredItems = useMemo(() => {
+    return history.filter((item) => {
+      if (activeFolder && item.folderId !== activeFolder) return false;
+      if (!matchesDateFilter(item, dateFilter)) return false;
+      if (!matchesKeyword(item, searchQuery.trim())) return false;
+      return true;
+    });
+  }, [history, activeFolder, dateFilter, searchQuery]);
+
+  // 날짜별 그룹 (키워드 검색 중엔 평면 리스트)
+  const groupedHistory = useMemo(() => {
+    if (isSearching) return null; // 검색 중엔 그룹 없이 평면 표시
     const groups: Record<string, HistoryItem[]> = {};
-    const now = new Date();
-    for (const item of filtered) {
-      const diff = Math.floor((now.getTime() - new Date(item.savedAt).getTime()) / 86400000);
-      const label = diff === 0 ? '오늘' : diff === 1 ? '어제' : diff < 7 ? '이번 주' : diff < 30 ? '이번 달' : '이전';
+    const now = Date.now();
+    for (const item of filteredItems) {
+      const diff = Math.floor((now - new Date(item.savedAt).getTime()) / 86400000);
+      const label =
+        diff === 0 ? '오늘'
+        : diff === 1 ? '어제'
+        : diff < 7  ? '이번 주'
+        : diff < 30 ? '이번 달'
+        : '이전';
       if (!groups[label]) groups[label] = [];
       groups[label].push(item);
     }
     const ORDER = ['오늘', '어제', '이번 주', '이번 달', '이전'];
-    return ORDER.filter(g => groups[g]).map(g => ({ title: g, data: groups[g] }));
-  }, [history, activeFolder]);
+    return ORDER.filter((g) => groups[g]).map((g) => ({ title: g, data: groups[g] }));
+  }, [filteredItems, isSearching]);
 
   return (
     <View style={styles.container}>
@@ -126,7 +188,6 @@ export default function Home() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.emptyScroll, { paddingBottom: 100 }]}
           >
-            {/* 환영 배너 */}
             <View style={styles.heroBanner}>
               <View style={[styles.heroIcon, { backgroundColor: '#EEF0FF' }]}>
                 <Feather name="bookmark" size={22} color={Colors.primary} />
@@ -137,7 +198,6 @@ export default function Home() {
               </Text>
             </View>
 
-            {/* 사용 방법 */}
             <Text style={styles.howTitle}>이렇게 저장하세요</Text>
             <View style={styles.stepList}>
               {[
@@ -171,7 +231,9 @@ export default function Home() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.scroll, { paddingBottom: 80 }]}
+            keyboardShouldPersistTaps="handled"
           >
+            {/* 헤더 행 */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>내 분석 기록</Text>
               <View style={styles.badge}>
@@ -179,7 +241,68 @@ export default function Home() {
               </View>
             </View>
 
-            {/* 폴더 탭 — 폴더가 하나라도 있을 때만 표시 */}
+            {/* ── 검색창 ── */}
+            <View style={styles.searchBar}>
+              <Feather name="search" size={15} color={Colors.textTertiary} />
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="제목, 키포인트, 종목명으로 검색..."
+                placeholderTextColor={Colors.textTertiary}
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+                clearButtonMode="never"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <View style={styles.clearBtn}>
+                    <Feather name="x" size={11} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* ── 날짜 필터 칩 ── */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterChipsRow}
+              style={styles.filterChipsScroll}
+            >
+              {DATE_FILTERS.map(({ key, label }) => {
+                const active = dateFilter === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setDateFilter(key);
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    {key === 'all'    && <Feather name="list"      size={12} color={active ? '#fff' : Colors.textSecondary} />}
+                    {key === 'today'  && <Feather name="sun"       size={12} color={active ? '#fff' : Colors.textSecondary} />}
+                    {key === 'week'   && <Feather name="calendar"  size={12} color={active ? '#fff' : Colors.textSecondary} />}
+                    {key === 'month'  && <Feather name="clock"     size={12} color={active ? '#fff' : Colors.textSecondary} />}
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+                    {key !== 'all' && (() => {
+                      const cnt = history.filter((i) => matchesDateFilter(i, key)).length;
+                      return cnt > 0 ? (
+                        <View style={[styles.filterChipBadge, active && styles.filterChipBadgeActive]}>
+                          <Text style={[styles.filterChipBadgeText, active && styles.filterChipBadgeTextActive]}>{cnt}</Text>
+                        </View>
+                      ) : null;
+                    })()}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* ── 폴더 탭 (폴더가 있을 때만) ── */}
             {folders.length > 0 && (
               <ScrollView
                 horizontal
@@ -193,11 +316,11 @@ export default function Home() {
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.folderTabText, activeFolder === null && styles.folderTabTextActive]}>
-                    전체
+                    전체 폴더
                   </Text>
                 </TouchableOpacity>
                 {folders.map((folder) => {
-                  const count = history.filter(h => h.folderId === folder.id).length;
+                  const count = history.filter((h) => h.folderId === folder.id).length;
                   const isActive = activeFolder === folder.id;
                   return (
                     <TouchableOpacity
@@ -223,23 +346,66 @@ export default function Home() {
               </ScrollView>
             )}
 
-            {groupedHistory.map((section) => (
-              <View key={section.title}>
-                <View style={styles.dateSectionRow}>
-                  <Text style={styles.dateSectionLabel}>{section.title}</Text>
-                  <View style={styles.dateSectionLine} />
-                  <Text style={styles.dateSectionCount}>{section.data.length}건</Text>
+            {/* ── 검색 중: 결과 수 + 평면 리스트 ── */}
+            {isSearching ? (
+              <>
+                <View style={styles.searchResultHeader}>
+                  <Feather name="search" size={13} color={Colors.textTertiary} />
+                  <Text style={styles.searchResultText}>
+                    <Text style={styles.searchResultKeyword}>"{searchQuery}"</Text>
+                    {' '}검색 결과 {filteredItems.length}건
+                  </Text>
                 </View>
-                {section.data.map((item) => (
-                  <HistoryCard
-                    key={item.id}
-                    item={item}
-                    onPress={() => handleViewResult(item)}
-                    onDelete={() => deleteFromHistory(item.id)}
-                  />
-                ))}
-              </View>
-            ))}
+                {filteredItems.length === 0 ? (
+                  <View style={styles.emptyResult}>
+                    <Feather name="inbox" size={32} color={Colors.border} />
+                    <Text style={styles.emptyResultTitle}>검색 결과가 없습니다</Text>
+                    <Text style={styles.emptyResultDesc}>
+                      다른 키워드나 날짜 범위로 다시 검색해 보세요
+                    </Text>
+                  </View>
+                ) : (
+                  filteredItems.map((item) => (
+                    <HistoryCard
+                      key={item.id}
+                      item={item}
+                      onPress={() => handleViewResult(item)}
+                      onDelete={() => deleteFromHistory(item.id)}
+                      highlightKeyword={searchQuery.trim()}
+                    />
+                  ))
+                )}
+              </>
+            ) : (
+              /* ── 일반: 날짜 그룹 ── */
+              <>
+                {filteredItems.length === 0 ? (
+                  <View style={styles.emptyResult}>
+                    <Feather name="inbox" size={32} color={Colors.border} />
+                    <Text style={styles.emptyResultTitle}>해당 기간 기록이 없습니다</Text>
+                    <Text style={styles.emptyResultDesc}>다른 날짜 범위를 선택해 보세요</Text>
+                  </View>
+                ) : (
+                  (groupedHistory ?? []).map((section) => (
+                    <View key={section.title}>
+                      <View style={styles.dateSectionRow}>
+                        <Text style={styles.dateSectionLabel}>{section.title}</Text>
+                        <View style={styles.dateSectionLine} />
+                        <Text style={styles.dateSectionCount}>{section.data.length}건</Text>
+                      </View>
+                      {section.data.map((item) => (
+                        <HistoryCard
+                          key={item.id}
+                          item={item}
+                          onPress={() => handleViewResult(item)}
+                          onDelete={() => deleteFromHistory(item.id)}
+                        />
+                      ))}
+                    </View>
+                  ))
+                )}
+              </>
+            )}
           </ScrollView>
         )}
       </View>
@@ -263,7 +429,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
 
-  /* 온보딩 오버레이 */
+  /* 온보딩 */
   onboardingOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.55)',
@@ -280,41 +446,25 @@ const styles = StyleSheet.create({
   onboardingIconBg: {
     width: 64, height: 64, borderRadius: 20,
     backgroundColor: Colors.primaryBg,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  onboardingTitle: {
-    fontFamily: 'Inter_700Bold', fontSize: 20, color: Colors.text,
-    textAlign: 'center',
-  },
+  onboardingTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: Colors.text, textAlign: 'center' },
   onboardingBody: {
     fontFamily: 'Inter_400Regular', fontSize: 14,
-    color: Colors.textSecondary, textAlign: 'center',
-    lineHeight: 22,
+    color: Colors.textSecondary, textAlign: 'center', lineHeight: 22,
   },
-  onboardingEmphasis: {
-    fontFamily: 'Inter_700Bold', color: Colors.primary,
-  },
+  onboardingEmphasis: { fontFamily: 'Inter_700Bold', color: Colors.primary },
   onboardingFeatures: {
-    alignSelf: 'stretch',
-    backgroundColor: Colors.primaryBg,
-    borderRadius: 14, padding: 16, gap: 10,
-    marginVertical: 4,
+    alignSelf: 'stretch', backgroundColor: Colors.primaryBg,
+    borderRadius: 14, padding: 16, gap: 10, marginVertical: 4,
   },
-  onboardingFeatureRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-  },
-  onboardingFeatureText: {
-    fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text,
-  },
+  onboardingFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  onboardingFeatureText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text },
   onboardingBtn: {
     alignSelf: 'stretch', backgroundColor: Colors.primary,
-    borderRadius: 14, paddingVertical: 15,
-    alignItems: 'center', marginTop: 4,
+    borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 4,
   },
-  onboardingBtnText: {
-    fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff',
-  },
+  onboardingBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
 
   /* 헤더 */
   header: {
@@ -331,102 +481,109 @@ const styles = StyleSheet.create({
   },
 
   emptyScroll: { paddingHorizontal: 20, paddingTop: 20 },
-
   heroBanner: {
-    backgroundColor: Colors.surface,
-    borderRadius: 20, padding: 24,
+    backgroundColor: Colors.surface, borderRadius: 20, padding: 24,
     alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: Colors.border,
-    marginBottom: 24,
+    borderWidth: 1, borderColor: Colors.border, marginBottom: 24,
   },
-  heroIcon: {
-    width: 52, height: 52, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4,
-  },
-  heroTitle: {
-    fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text,
-    textAlign: 'center', lineHeight: 24,
-  },
-  heroSubtitle: {
-    fontFamily: 'Inter_400Regular', fontSize: 13,
-    color: Colors.textSecondary, textAlign: 'center', lineHeight: 21,
-  },
-
-  howTitle: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 13,
-    color: Colors.textSecondary, marginBottom: 10,
-    letterSpacing: 0.3,
-  },
-  stepList: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
-    overflow: 'hidden', marginBottom: 16,
-  },
-  stepRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  stepIconBg: {
-    width: 42, height: 42, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  heroIcon: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  heroTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text, textAlign: 'center', lineHeight: 24 },
+  heroSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21 },
+  howTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.textSecondary, marginBottom: 10, letterSpacing: 0.3 },
+  stepList: { backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden', marginBottom: 16 },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  stepIconBg: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   stepText: { flex: 1, gap: 2 },
   stepTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text },
   stepDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
-
-  historyHint: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 8,
-  },
-  historyHintText: {
-    fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary,
-  },
+  historyHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  historyHintText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary },
 
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: Colors.text },
-  badge: {
-    backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
-  },
+  badge: { backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
 
+  /* 검색창 */
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: Colors.surface,
+    borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.text,
+    paddingVertical: 0,
+  },
+  clearBtn: {
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: Colors.textTertiary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  /* 날짜 필터 칩 */
+  filterChipsScroll: { marginBottom: 8, marginHorizontal: -16 },
+  filterChipsRow: { paddingHorizontal: 16, gap: 8, paddingVertical: 2 },
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  filterChipText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary },
+  filterChipTextActive: { color: '#fff', fontFamily: 'Inter_600SemiBold' },
+  filterChipBadge: {
+    backgroundColor: Colors.border, borderRadius: 10,
+    paddingHorizontal: 6, paddingVertical: 1,
+  },
+  filterChipBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  filterChipBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: Colors.textSecondary },
+  filterChipBadgeTextActive: { color: '#fff' },
+
   /* 폴더 탭 */
-  folderTabsScroll: { marginBottom: 8, marginHorizontal: -16 },
+  folderTabsScroll: { marginBottom: 10, marginHorizontal: -16 },
   folderTabsRow: { paddingHorizontal: 16, gap: 8, paddingVertical: 4 },
   folderTab: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
   },
-  folderTabActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  folderTabActive: { backgroundColor: Colors.primaryBg, borderColor: Colors.primary },
   folderTabEmoji: { fontSize: 14 },
   folderTabText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary },
-  folderTabTextActive: { color: '#fff', fontFamily: 'Inter_600SemiBold' },
-  folderTabBadge: {
-    backgroundColor: Colors.border, borderRadius: 10,
-    paddingHorizontal: 6, paddingVertical: 1,
-  },
-  folderTabBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  folderTabTextActive: { color: Colors.primary, fontFamily: 'Inter_600SemiBold' },
+  folderTabBadge: { backgroundColor: Colors.border, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
+  folderTabBadgeActive: { backgroundColor: '#D6C8F5' },
   folderTabBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: Colors.textSecondary },
-  folderTabBadgeTextActive: { color: '#fff' },
+  folderTabBadgeTextActive: { color: Colors.primary },
 
+  /* 날짜 섹션 구분 */
   dateSectionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginTop: 16, marginBottom: 8, paddingHorizontal: 2,
   },
-  dateSectionLabel: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 12,
-    color: Colors.primary, minWidth: 36,
-  },
-  dateSectionLine: {
-    flex: 1, height: 1, backgroundColor: Colors.border,
-  },
-  dateSectionCount: {
-    fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary,
-  },
+  dateSectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: Colors.primary, minWidth: 36 },
+  dateSectionLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dateSectionCount: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
 
+  /* 검색 결과 헤더 */
+  searchResultHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 10, paddingHorizontal: 2,
+  },
+  searchResultText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary },
+  searchResultKeyword: { fontFamily: 'Inter_700Bold', color: Colors.primary },
+
+  /* 빈 결과 */
+  emptyResult: {
+    alignItems: 'center', paddingVertical: 48, gap: 10,
+  },
+  emptyResultTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.textSecondary },
+  emptyResultDesc: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary, textAlign: 'center' },
+
+  /* FAB */
   fabContainer: {
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: Colors.background,
