@@ -27,8 +27,9 @@ import { Card } from '@/components/Card';
 import { ProgressBar } from '@/components/ProgressBar';
 import { SentimentBadge } from '@/components/SentimentBadge';
 import { StockTag } from '@/components/StockTag';
+import { StockPriceSheet } from '@/components/StockPriceSheet';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
-import { AnalysisResult } from '@/services/aiAnalysis';
+import { AnalysisResult, StockRecommendation } from '@/services/aiAnalysis';
 import {
   getCredibilityColor,
   getCredibilityLabel,
@@ -45,6 +46,8 @@ export default function ResultScreen() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
   const [memo, setMemo] = useState('');
+  const [selectedStock, setSelectedStock] = useState<StockRecommendation | null>(null);
+  const [showStockSheet, setShowStockSheet] = useState(false);
   const [showCredInfo, setShowCredInfo] = useState(false);
   const [showSentimentInfo, setShowSentimentInfo] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -153,7 +156,7 @@ export default function ResultScreen() {
             </View>
 
             {/* 원본 보기 버튼 — URL 있을 때만 표시 */}
-            {inputUrl && result.contentType !== 'screenshot' && (
+            {inputUrl && result.contentType !== 'screenshot' as any && (
               <TouchableOpacity
                 style={styles.originalLinkBtn}
                 onPress={() => Linking.openURL(inputUrl)}
@@ -432,10 +435,26 @@ export default function ResultScreen() {
               </LinearGradient>
               <Text style={styles.cardTitle}>관련 종목</Text>
             </View>
-            <Text style={styles.stocksSubtitle}>해당 콘텐츠에서 언급되거나 연관된 종목입니다</Text>
+            <Text style={styles.stocksSubtitle}>종목을 탭하면 실시간 시세와 주문 정보를 확인할 수 있습니다</Text>
             <View style={styles.stocksList}>
               {(result.recommendedStocks ?? []).map((stock) => (
-                <StockTag key={stock.ticker} stock={stock} />
+                <TouchableOpacity
+                  key={stock.ticker}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedStock(stock);
+                    setShowStockSheet(true);
+                  }}
+                >
+                  <View style={styles.stockTapRow}>
+                    <StockTag stock={stock} />
+                    <View style={styles.stockTapHint}>
+                      <Text style={styles.stockTapHintText}>시세</Text>
+                      <Feather name="chevron-right" size={12} color={Colors.primary} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
             <View style={styles.relevanceLegend}>
@@ -450,6 +469,30 @@ export default function ResultScreen() {
                 </View>
               ))}
             </View>
+          </Card>
+          )}
+
+          {/* 시장 맥락 */}
+          {!cannotAnalyze && ((result.sectorTags?.length ?? 0) > 0 || result.marketContext) && (
+          <Card style={styles.contextCard}>
+            <View style={styles.cardTitleRow}>
+              <LinearGradient colors={['#0F766E', '#0D9488']} style={styles.cardTitleIcon}>
+                <Feather name="globe" size={13} color="#fff" />
+              </LinearGradient>
+              <Text style={styles.cardTitle}>시장 맥락</Text>
+            </View>
+            {(result.sectorTags?.length ?? 0) > 0 && (
+              <View style={styles.sectorTagsRow}>
+                {(result.sectorTags ?? []).map((tag) => (
+                  <View key={tag} style={styles.sectorTag}>
+                    <Text style={styles.sectorTagText}># {tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {result.marketContext ? (
+              <Text style={styles.marketContextText}>{result.marketContext}</Text>
+            ) : null}
           </Card>
           )}
 
@@ -534,6 +577,11 @@ export default function ResultScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      <StockPriceSheet
+        stock={selectedStock}
+        visible={showStockSheet}
+        onClose={() => setShowStockSheet(false)}
+      />
       <KiwoomBottomBar />
     </View>
   );
@@ -738,6 +786,38 @@ const styles = StyleSheet.create({
     flex: 2, borderRadius: 12, backgroundColor: Colors.primary,
     paddingVertical: 13, alignItems: 'center', flexDirection: 'row',
     justifyContent: 'center', gap: 6,
+  },
+
+  /* 관련 종목 — 탭 */
+  stockTapRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingRight: 4, marginBottom: 2,
+  },
+  stockTapHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: Colors.primaryBg,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  stockTapHintText: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 11, color: Colors.primary,
+  },
+
+  /* 시장 맥락 카드 */
+  contextCard: { gap: 10 },
+  sectorTagsRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+  },
+  sectorTag: {
+    backgroundColor: '#0F766E18',
+    borderWidth: 1, borderColor: '#0F766E30',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  sectorTagText: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#0F766E',
+  },
+  marketContextText: {
+    fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary,
+    lineHeight: 21,
   },
   memoSaveText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
 });

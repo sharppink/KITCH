@@ -20,6 +20,8 @@ export interface AnalysisResult {
   analyzedAt: Date;
   cannotAnalyze?: boolean;
   geoBlocked?: boolean;
+  sectorTags?: string[];
+  marketContext?: string;
 }
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN

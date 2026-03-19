@@ -48,6 +48,20 @@ export default function Home() {
     router.push({ pathname: '/input', params: { type } });
   };
 
+  // 일자별 그룹핑
+  const groupedHistory = React.useMemo(() => {
+    const groups: Record<string, HistoryItem[]> = {};
+    const now = new Date();
+    for (const item of history) {
+      const diff = Math.floor((now.getTime() - new Date(item.savedAt).getTime()) / 86400000);
+      const label = diff === 0 ? '오늘' : diff === 1 ? '어제' : diff < 7 ? '이번 주' : diff < 30 ? '이번 달' : '이전';
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(item);
+    }
+    const ORDER = ['오늘', '어제', '이번 주', '이번 달', '이전'];
+    return ORDER.filter(g => groups[g]).map(g => ({ title: g, data: groups[g] }));
+  }, [history]);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#12146A" />
@@ -158,13 +172,22 @@ export default function Home() {
                 <Text style={styles.badgeText}>{history.length}</Text>
               </View>
             </View>
-            {history.map((item) => (
-              <HistoryCard
-                key={item.id}
-                item={item}
-                onPress={() => handleViewResult(item)}
-                onDelete={() => deleteFromHistory(item.id)}
-              />
+            {groupedHistory.map((section) => (
+              <View key={section.title}>
+                <View style={styles.dateSectionRow}>
+                  <Text style={styles.dateSectionLabel}>{section.title}</Text>
+                  <View style={styles.dateSectionLine} />
+                  <Text style={styles.dateSectionCount}>{section.data.length}건</Text>
+                </View>
+                {section.data.map((item) => (
+                  <HistoryCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => handleViewResult(item)}
+                    onDelete={() => deleteFromHistory(item.id)}
+                  />
+                ))}
+              </View>
             ))}
           </ScrollView>
         )}
@@ -317,6 +340,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
   },
   badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
+
+  dateSectionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 16, marginBottom: 8, paddingHorizontal: 2,
+  },
+  dateSectionLabel: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 12,
+    color: Colors.primary, minWidth: 36,
+  },
+  dateSectionLine: {
+    flex: 1, height: 1, backgroundColor: Colors.border,
+  },
+  dateSectionCount: {
+    fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary,
+  },
 
   fabContainer: {
     paddingHorizontal: 16, paddingVertical: 12,
