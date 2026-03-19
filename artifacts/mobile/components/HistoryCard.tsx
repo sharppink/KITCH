@@ -38,6 +38,15 @@ export function HistoryCard({ item, onPress, onDelete }: HistoryCardProps) {
         </View>
         <Text style={styles.title} numberOfLines={1}>{result.sourceTitle}</Text>
         <Text style={styles.summary} numberOfLines={2}>{result.summary?.[0] ?? ''}</Text>
+
+        {/* 메모 미리보기 */}
+        {!!item.memo && (
+          <View style={styles.memoPreview}>
+            <Feather name="edit-3" size={11} color={Colors.primary} />
+            <Text style={styles.memoPreviewText} numberOfLines={1}>{item.memo}</Text>
+          </View>
+        )}
+
         <View style={styles.footer}>
           <View style={styles.scoreRow}>
             <Text style={[styles.score, { color: credColor }]}>{result.credibilityScore ?? '-'}</Text>
@@ -75,6 +84,16 @@ const styles = StyleSheet.create({
   date: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
   title: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text },
   summary: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  memoPreview: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: Colors.primaryBg, borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 4,
+    alignSelf: 'flex-start', maxWidth: '100%',
+  },
+  memoPreviewText: {
+    fontFamily: 'Inter_400Regular', fontSize: 11,
+    color: Colors.primary, flex: 1,
+  },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   scoreRow: { flexDirection: 'row', alignItems: 'baseline' },
   score: { fontFamily: 'Inter_700Bold', fontSize: 16 },

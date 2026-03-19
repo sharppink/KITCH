@@ -113,7 +113,7 @@ export default function Home() {
               </View>
               <Text style={styles.heroTitle}>링크 하나로{'\n'}투자 뉴스 핵심만 보기</Text>
               <Text style={styles.heroSubtitle}>
-                기사·스크린샷·유튜브를 저장하면{'\n'}AI가 핵심만 골라 정리해드려요.
+                기사·유튜브 링크를 저장하면 AI가 핵심만 정리해드려요.{'\n'}브라우저 공유하기 버튼으로 바로 저장하세요.
               </Text>
             </View>
 

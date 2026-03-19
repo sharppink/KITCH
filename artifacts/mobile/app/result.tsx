@@ -5,16 +5,19 @@ import * as Linking from 'expo-linking';
 import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -37,16 +40,19 @@ import {
 export default function ResultScreen() {
   const insets = useSafeAreaInsets();
   const { historyId } = useLocalSearchParams<{ historyId: string }>();
-  const { history } = useAnalysisHistory();
+  const { history, updateMemo } = useAnalysisHistory();
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [inputUrl, setInputUrl] = useState<string | undefined>(undefined);
+  const [memo, setMemo] = useState('');
   const [showCredInfo, setShowCredInfo] = useState(false);
   const [showSentimentInfo, setShowSentimentInfo] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showMemoModal, setShowMemoModal] = useState(false);
+  const [memoEditText, setMemoEditText] = useState('');
 
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(20)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     if (historyId && history.length > 0) {
@@ -54,6 +60,7 @@ export default function ResultScreen() {
       if (item) {
         setResult(item.result);
         setInputUrl(item.inputUrl);
+        setMemo(item.memo ?? '');
         Animated.parallel([
           Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
           Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
@@ -61,6 +68,18 @@ export default function ResultScreen() {
       }
     }
   }, [historyId, history]);
+
+  const handleSaveMemo = async () => {
+    if (!historyId) return;
+    await updateMemo(historyId, memoEditText.trim());
+    setMemo(memoEditText.trim());
+    setShowMemoModal(false);
+  };
+
+  const openMemoModal = () => {
+    setMemoEditText(memo);
+    setShowMemoModal(true);
+  };
 
   const handleShare = async () => {
     if (!result) return;
@@ -434,6 +453,72 @@ export default function ResultScreen() {
           </Card>
           )}
 
+          {/* 메모 */}
+          <TouchableOpacity onPress={openMemoModal} activeOpacity={0.85} style={styles.memoCard}>
+            <LinearGradient colors={['#3B2D8E', Colors.primary]} style={styles.memoHeader}>
+              <View style={styles.memoHeaderLeft}>
+                <Feather name="edit-3" size={14} color="#fff" />
+                <Text style={styles.memoHeaderTitle}>메모</Text>
+              </View>
+              <Text style={styles.memoHeaderHint}>{memo ? '수정하기' : '탭하여 작성'}</Text>
+            </LinearGradient>
+            <View style={styles.memoBody}>
+              {memo ? (
+                <Text style={styles.memoText}>{memo}</Text>
+              ) : (
+                <Text style={styles.memoPlaceholder}>이 콘텐츠에 대한 생각을 기록해두세요</Text>
+              )}
+              {[0,1,2,3].map((i) => <View key={i} style={styles.memoLine} />)}
+            </View>
+          </TouchableOpacity>
+
+          {/* 메모 편집 모달 */}
+          <Modal
+            visible={showMemoModal}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowMemoModal(false)}
+          >
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+              <Pressable style={styles.modalOverlay} onPress={() => setShowMemoModal(false)}>
+                <Pressable style={styles.memoSheet} onPress={() => {}}>
+                  <View style={styles.detailModalHandle} />
+                  <LinearGradient colors={['#3B2D8E', Colors.primary]} style={styles.memoSheetHeader}>
+                    <View style={styles.memoHeaderLeft}>
+                      <Feather name="edit-3" size={16} color="#fff" />
+                      <Text style={styles.memoSheetTitle}>메모</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setShowMemoModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Feather name="x" size={20} color="rgba(255,255,255,0.7)" />
+                    </TouchableOpacity>
+                  </LinearGradient>
+                  <TextInput
+                    style={styles.memoInput}
+                    value={memoEditText}
+                    onChangeText={setMemoEditText}
+                    placeholder="이 콘텐츠에 대한 생각, 투자 아이디어, 체크 포인트를 자유롭게 적어보세요"
+                    placeholderTextColor={Colors.textTertiary}
+                    multiline
+                    autoFocus
+                    textAlignVertical="top"
+                  />
+                  <View style={styles.memoSheetFooter}>
+                    <TouchableOpacity style={styles.memoCancelBtn} onPress={() => setShowMemoModal(false)} activeOpacity={0.7}>
+                      <Text style={styles.memoCancelText}>취소</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.memoSaveBtn} onPress={handleSaveMemo} activeOpacity={0.85}>
+                      <Feather name="check" size={16} color="#fff" />
+                      <Text style={styles.memoSaveText}>저장</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Pressable>
+              </Pressable>
+            </KeyboardAvoidingView>
+          </Modal>
+
           {/* 투자 주의 문구 */}
           <View style={styles.disclaimerBox}>
             <Feather name="alert-triangle" size={13} color={Colors.warning} />
@@ -598,4 +683,61 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular', fontSize: 14,
     color: Colors.text, lineHeight: 24,
   },
+
+  /* 메모 카드 */
+  memoCard: {
+    borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  },
+  memoHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  memoHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  memoHeaderTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
+  memoHeaderHint: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.65)' },
+  memoBody: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, gap: 0, minHeight: 110, justifyContent: 'flex-start' },
+  memoText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.text, lineHeight: 22, marginBottom: 6 },
+  memoPlaceholder: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary, marginBottom: 10, fontStyle: 'italic' },
+  memoLine: { height: 1, backgroundColor: '#EBEBF0', marginBottom: 16 },
+
+  /* 메모 편집 바텀시트 */
+  memoSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    overflow: 'hidden',
+    maxHeight: '75%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12, shadowRadius: 20, elevation: 12,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+  },
+  memoSheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+  },
+  memoSheetTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  memoInput: {
+    fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.text,
+    paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12,
+    minHeight: 180, lineHeight: 26,
+  },
+  memoSheetFooter: {
+    flexDirection: 'row', gap: 10,
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  memoCancelBtn: {
+    flex: 1, borderRadius: 12, borderWidth: 1, borderColor: Colors.border,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  memoCancelText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.textSecondary },
+  memoSaveBtn: {
+    flex: 2, borderRadius: 12, backgroundColor: Colors.primary,
+    paddingVertical: 13, alignItems: 'center', flexDirection: 'row',
+    justifyContent: 'center', gap: 6,
+  },
+  memoSaveText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
 });

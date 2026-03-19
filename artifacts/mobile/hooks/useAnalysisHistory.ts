@@ -11,6 +11,7 @@ export interface HistoryItem {
   result: AnalysisResult;
   inputUrl?: string;
   savedAt: string; // ISO string for JSON serialization
+  memo?: string;
 }
 
 export function useAnalysisHistory() {
@@ -81,6 +82,22 @@ export function useAnalysisHistory() {
     [history]
   );
 
+  const updateMemo = useCallback(
+    async (id: string, memo: string) => {
+      const updated = history.map((item) =>
+        item.id === id ? { ...item, memo } : item
+      );
+      setHistory(updated);
+
+      try {
+        await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      } catch (error) {
+        console.error('Failed to update memo:', error);
+      }
+    },
+    [history]
+  );
+
   const clearHistory = useCallback(async () => {
     setHistory([]);
     try {
@@ -95,6 +112,7 @@ export function useAnalysisHistory() {
     isLoading,
     saveToHistory,
     deleteFromHistory,
+    updateMemo,
     clearHistory,
     refresh: loadHistory,
   };
