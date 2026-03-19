@@ -1,10 +1,19 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState } from 'react';
 import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
-  Image, ScrollView, StatusBar, StyleSheet,
-  Text, TouchableOpacity, View,
+  Animated,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
@@ -12,33 +21,32 @@ import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { HistoryCard } from '@/components/HistoryCard';
 import { HistoryItem } from '@/hooks/useAnalysisHistory';
 
-const QUICK_ACTIONS = [
-  {
-    type: 'news',
-    icon: 'link' as const,
-    label: '뉴스 기사',
-    color: Colors.primary,
-    bg: Colors.primaryBg,
-  },
-  {
-    type: 'screenshot',
-    icon: 'image' as const,
-    label: '스크린샷',
-    color: '#7C3AED',
-    bg: '#F3EEFF',
-  },
-  {
-    type: 'youtube',
-    icon: 'youtube' as const,
-    label: '유튜브',
-    color: '#EF4444',
-    bg: '#FFF0F0',
-  },
-];
+const ONBOARDING_KEY = 'kitch_onboarding_v1';
 
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { history, deleteFromHistory } = useAnalysisHistory();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
+      if (!val) setShowOnboarding(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (showOnboarding) {
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+    }
+  }, [showOnboarding]);
+
+  const dismissOnboarding = async () => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+      setShowOnboarding(false);
+    });
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'done');
+  };
 
   const handleViewResult = (item: HistoryItem) => {
     router.push({ pathname: '/result', params: { historyId: item.id, cached: 'true' } });
@@ -51,6 +59,41 @@ export default function Home() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#12146A" />
+
+      {/* 온보딩 모달 */}
+      {showOnboarding && (
+        <Animated.View style={[styles.onboardingOverlay, { opacity: fadeAnim }]}>
+          <Pressable style={styles.onboardingOverlay} onPress={dismissOnboarding}>
+            <Pressable style={styles.onboardingCard} onPress={() => {}}>
+              <View style={styles.onboardingIconBg}>
+                <Feather name="bar-chart-2" size={28} color={Colors.primary} />
+              </View>
+              <Text style={styles.onboardingTitle}>투자 정보, 그냥 믿지 마세요</Text>
+              <Text style={styles.onboardingBody}>
+                뉴스 기사·스크린샷·유튜브 영상을{'\n'}
+                AI로 분석해 <Text style={styles.onboardingEmphasis}>신뢰도</Text>를 점수로 보여드려요.{'\n\n'}
+                다양한 플랫폼의 투자 정보를{'\n'}
+                한 곳에서 저장하고 비교해보세요.
+              </Text>
+              <View style={styles.onboardingFeatures}>
+                {[
+                  { icon: 'link' as const, text: '뉴스 기사 링크 분석' },
+                  { icon: 'image' as const, text: '스크린샷 OCR 분석' },
+                  { icon: 'youtube' as const, text: '유튜브 영상 분석' },
+                ].map((f) => (
+                  <View key={f.text} style={styles.onboardingFeatureRow}>
+                    <Feather name={f.icon} size={14} color={Colors.primary} />
+                    <Text style={styles.onboardingFeatureText}>{f.text}</Text>
+                  </View>
+                ))}
+              </View>
+              <TouchableOpacity style={styles.onboardingBtn} onPress={dismissOnboarding} activeOpacity={0.85}>
+                <Text style={styles.onboardingBtnText}>확인, 시작할게요</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Animated.View>
+      )}
 
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -65,24 +108,6 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
-      {/* 빠른 분석 진입 */}
-      <View style={styles.quickBar}>
-        <Text style={styles.quickBarLabel}>분석 유형 선택</Text>
-        <View style={styles.quickActions}>
-          {QUICK_ACTIONS.map((action) => (
-            <TouchableOpacity
-              key={action.type}
-              style={[styles.quickBtn, { backgroundColor: action.bg, borderColor: action.color + '33' }]}
-              activeOpacity={0.75}
-              onPress={() => handleQuickAnalyze(action.type)}
-            >
-              <Feather name={action.icon} size={16} color={action.color} />
-              <Text style={[styles.quickBtnText, { color: action.color }]}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
       {/* 콘텐츠 */}
       <View style={{ flex: 1 }}>
         {history.length === 0 ? (
@@ -92,10 +117,8 @@ export default function Home() {
           >
             {/* 환영 배너 */}
             <View style={styles.heroBanner}>
-              <View style={styles.heroIconRow}>
-                <View style={[styles.heroIcon, { backgroundColor: '#EEF0FF' }]}>
-                  <Feather name="cpu" size={22} color={Colors.primary} />
-                </View>
+              <View style={[styles.heroIcon, { backgroundColor: '#EEF0FF' }]}>
+                <Feather name="cpu" size={22} color={Colors.primary} />
               </View>
               <Text style={styles.heroTitle}>AI가 투자 정보를 분석해드려요</Text>
               <Text style={styles.heroSubtitle}>
@@ -176,6 +199,60 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
 
+  /* 온보딩 오버레이 */
+  onboardingOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 100, paddingHorizontal: 24,
+  },
+  onboardingCard: {
+    width: '100%', backgroundColor: Colors.surface,
+    borderRadius: 24, padding: 28,
+    alignItems: 'center', gap: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2, shadowRadius: 32, elevation: 16,
+  },
+  onboardingIconBg: {
+    width: 64, height: 64, borderRadius: 20,
+    backgroundColor: Colors.primaryBg,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
+  },
+  onboardingTitle: {
+    fontFamily: 'Inter_700Bold', fontSize: 20, color: Colors.text,
+    textAlign: 'center',
+  },
+  onboardingBody: {
+    fontFamily: 'Inter_400Regular', fontSize: 14,
+    color: Colors.textSecondary, textAlign: 'center',
+    lineHeight: 22,
+  },
+  onboardingEmphasis: {
+    fontFamily: 'Inter_700Bold', color: Colors.primary,
+  },
+  onboardingFeatures: {
+    alignSelf: 'stretch',
+    backgroundColor: Colors.primaryBg,
+    borderRadius: 14, padding: 16, gap: 10,
+    marginVertical: 4,
+  },
+  onboardingFeatureRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  onboardingFeatureText: {
+    fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text,
+  },
+  onboardingBtn: {
+    alignSelf: 'stretch', backgroundColor: Colors.primary,
+    borderRadius: 14, paddingVertical: 15,
+    alignItems: 'center', marginTop: 4,
+  },
+  onboardingBtnText: {
+    fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff',
+  },
+
+  /* 헤더 */
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingBottom: 12,
@@ -189,26 +266,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  quickBar: {
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
-    gap: 10,
-  },
-  quickBarLabel: {
-    fontFamily: 'Inter_500Medium', fontSize: 11,
-    color: Colors.textTertiary, letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  quickActions: { flexDirection: 'row', gap: 8 },
-  quickBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 6,
-    paddingVertical: 10, borderRadius: 12,
-    borderWidth: 1,
-  },
-  quickBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-
   emptyScroll: { paddingHorizontal: 20, paddingTop: 20 },
 
   heroBanner: {
@@ -218,10 +275,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border,
     marginBottom: 24,
   },
-  heroIconRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
   heroIcon: {
     width: 52, height: 52, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 17, color: Colors.text,
