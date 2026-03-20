@@ -4,15 +4,14 @@ import { Sentiment } from '@/services/aiAnalysis';
 import Colors from '@/constants/colors';
 
 export function getCredibilityLabel(score: number): string {
-  if (score >= 80) return '신뢰도 높음';
-  if (score >= 60) return '신뢰도 보통';
-  if (score >= 40) return '신뢰도 낮음';
-  return '신뢰도 매우 낮음';
+  if (score >= 76) return '신뢰도 높음';
+  if (score >= 51) return '신뢰도 보통';
+  return '신뢰도 낮음';
 }
 
 export function getCredibilityColor(score: number): string {
-  if (score >= 80) return Colors.credibilityHigh;
-  if (score >= 60) return Colors.credibilityMedium;
+  if (score >= 76) return Colors.credibilityHigh;
+  if (score >= 51) return Colors.credibilityMedium;
   return Colors.credibilityLow;
 }
 
