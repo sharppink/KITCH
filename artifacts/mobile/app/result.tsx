@@ -259,19 +259,18 @@ export default function ResultScreen() {
                       <Text style={[styles.credLabel, { color: isUnreliable ? '#E22C29' : credColor }]}>
                         {isUnreliable ? '신뢰 불가' : getCredibilityLabel(result.credibilityScore)}
                       </Text>
-                    </View>
-                    {criteriaScores.length === 6 && (
-                      <>
+                      {criteriaScores.length === 6 && (
                         <TouchableOpacity
                           style={styles.radarToggleBtn}
                           onPress={() => { Haptics.selectionAsync(); setShowRadarChart(v => !v); }}
                           activeOpacity={0.75}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                           <Feather name={showRadarChart ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.primary} />
                         </TouchableOpacity>
-                        {showRadarChart && <RadarChart scores={criteriaScores} />}
-                      </>
-                    )}
+                      )}
+                    </View>
+                    {criteriaScores.length === 6 && showRadarChart && <RadarChart scores={criteriaScores} />}
                   </>
                 )}
               </>
@@ -756,7 +755,7 @@ const styles = StyleSheet.create({
   credScore: { fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: -1 },
   credScoreMax: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
   credScoreWarning: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#E22C29', letterSpacing: -0.5 },
-  radarToggleBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 4, marginTop: 2 },
+  radarToggleBtn: { padding: 2 },
   radarToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.primary, flex: 1, textAlign: 'center' },
   credScoreNA: { fontFamily: 'Inter_700Bold', fontSize: 18, color: Colors.textTertiary, letterSpacing: -0.3 },
   credNABox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.bg, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, marginTop: 2 },
