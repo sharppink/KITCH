@@ -9,12 +9,13 @@ import { fetchStockPrice, StockPrice } from '@/services/stockPrice';
 interface Props {
   stock: StockRecommendation;
   onPress: () => void;
+  refreshKey?: number;
 }
 
 const RELEVANCE_COLORS = { high: '#16A34A', medium: '#D97706', low: '#6B7280' };
 const RELEVANCE_LABELS = { high: '관련도 높음', medium: '관련도 보통', low: '관련도 낮음' };
 
-export function StockPriceRow({ stock, onPress }: Props) {
+export function StockPriceRow({ stock, onPress, refreshKey }: Props) {
   const [price, setPrice] = useState<StockPrice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -26,7 +27,7 @@ export function StockPriceRow({ stock, onPress }: Props) {
       .then(setPrice)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [stock.ticker]);
+  }, [stock.ticker, refreshKey]);
 
   const isUp = (price?.change ?? 0) >= 0;
   const priceColor = isUp ? Colors.positive : Colors.negative;

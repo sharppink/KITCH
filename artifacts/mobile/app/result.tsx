@@ -66,6 +66,8 @@ export default function ResultScreen() {
   const [memoEditText, setMemoEditText] = useState('');
   const [showRadarChart, setShowRadarChart] = useState(false);
   const [showSaveSheet, setShowSaveSheet] = useState(false);
+  const [stockRefreshKey, setStockRefreshKey] = useState(0);
+  const [stockLastUpdated, setStockLastUpdated] = useState(new Date());
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -91,6 +93,15 @@ export default function ResultScreen() {
       }
     }
   }, [historyId, history]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setStockRefreshKey(k => k + 1);
+      setStockLastUpdated(now);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSaveMemo = async () => {
     if (!historyId) return;
@@ -504,13 +515,16 @@ export default function ResultScreen() {
                   <Text style={styles.infoBtnText}>i</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.stocksSubHint}>탭하면 상세 시세·주문</Text>
+              <Text style={styles.stocksSubHint}>
+                {stockLastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true })} 기준
+              </Text>
             </View>
             <View style={styles.stocksInlineList}>
               {(result.recommendedStocks ?? []).map((stock) => (
                 <StockPriceRow
                   key={stock.ticker}
                   stock={stock}
+                  refreshKey={stockRefreshKey}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setSelectedStock(stock);
