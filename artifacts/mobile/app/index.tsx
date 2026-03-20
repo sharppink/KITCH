@@ -192,6 +192,7 @@ export default function Home() {
                 {[
                   { icon: 'link'    as const, text: '뉴스 기사 — URL 붙여넣기 또는 공유 버튼' },
                   { icon: 'youtube' as const, text: '유튜브 — URL 붙여넣기 또는 공유 버튼' },
+                  { icon: 'twitter' as const, text: '트위터(X) — URL 붙여넣기 또는 공유 버튼' },
                 ].map((f) => (
                   <View key={f.text} style={styles.onboardingFeatureRow}>
                     <Feather name={f.icon} size={14} color={Colors.primary} />
@@ -246,7 +247,7 @@ export default function Home() {
               </View>
               <Text style={styles.heroTitle}>링크 하나로{'\n'}투자 뉴스 핵심만 보기</Text>
               <Text style={styles.heroSubtitle}>
-                기사·유튜브 링크를 저장하면 AI가 핵심만 정리해드려요.{'\n'}브라우저 공유하기 버튼으로 바로 저장하세요.
+                기사·유튜브·트위터 링크를 저장하면 AI가 핵심만 정리해드려요.{'\n'}앱의 공유하기 버튼으로 바로 저장하세요.
               </Text>
             </View>
             <Text style={styles.howTitle}>이렇게 저장하세요</Text>
