@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "XAp9tEf5iLFSQpgDob9Up"
+uri = "file://kitch-expo-qr.png"
+type = "image"
+title = "KITCH — Expo Go QR 코드"
