@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import Colors from '@/constants/colors';
 
-const PANEL_WIDTH = 200;
-const HANDLE_WIDTH = 24;
-const PANEL_HEIGHT = 180;
+const PANEL_WIDTH = 220;
+const HANDLE_WIDTH = 26;
+const HANDLE_HEIGHT = 90;
+const PANEL_HEIGHT = 340;
 
 interface Props {
   memo: string;
@@ -26,7 +27,6 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
   const startX = useRef(PANEL_WIDTH);
   const isOpen = useRef(false);
   const [editText, setEditText] = useState(memo);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     setEditText(memo);
@@ -34,7 +34,6 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
 
   const animateOpen = () => {
     isOpen.current = true;
-    setVisible(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Animated.spring(translateX, {
       toValue: 0,
@@ -51,7 +50,7 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
       useNativeDriver: true,
       tension: 72,
       friction: 11,
-    }).start(() => setVisible(false));
+    }).start();
   };
 
   const panResponder = useRef(
@@ -88,15 +87,17 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
       style={[styles.container, { transform: [{ translateX }] }]}
       {...panResponder.panHandlers}
     >
-      {/* Handle tab */}
-      <TouchableOpacity
-        style={styles.handle}
-        onPress={() => (isOpen.current ? animateClose() : animateOpen())}
-        activeOpacity={0.75}
-      >
-        <Feather name="edit-3" size={13} color="#fff" />
-        <Text style={styles.handleLabel}>{'메\n모'}</Text>
-      </TouchableOpacity>
+      {/* Handle wrapper — 하단 정렬된 작은 탭 */}
+      <View style={styles.handleWrapper}>
+        <TouchableOpacity
+          style={styles.handle}
+          onPress={() => (isOpen.current ? animateClose() : animateOpen())}
+          activeOpacity={0.75}
+        >
+          <Feather name="edit-3" size={13} color="#fff" />
+          <Text style={styles.handleLabel}>{'메\n모'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Panel */}
       <View style={styles.panel}>
@@ -129,7 +130,7 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
         />
 
         <TouchableOpacity
-          style={[styles.saveBtn, !editText.trim() && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, !editText.trim() && !memo && styles.saveBtnDisabled]}
           onPress={handleSave}
           disabled={!editText.trim() && !memo}
           activeOpacity={0.8}
@@ -162,15 +163,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     zIndex: 999,
   },
+  handleWrapper: {
+    width: HANDLE_WIDTH,
+    justifyContent: 'flex-end',
+  },
   handle: {
     width: HANDLE_WIDTH,
+    height: HANDLE_HEIGHT,
     backgroundColor: Colors.primary,
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 10,
     shadowColor: '#000',
     shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.15,
@@ -187,52 +192,51 @@ const styles = StyleSheet.create({
   panel: {
     flex: 1,
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
-    padding: 12,
-    gap: 10,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+    padding: 14,
+    gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: -4, height: 0 },
     shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 14,
+    elevation: 10,
   },
   dragBar: {
-    width: 28,
+    width: 32,
     height: 3,
     borderRadius: 2,
     backgroundColor: Colors.border,
     alignSelf: 'center',
-    marginBottom: 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   headerIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     backgroundColor: Colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.text,
   },
   input: {
     flex: 1,
     backgroundColor: Colors.bg,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    padding: 12,
     fontFamily: 'Inter_400Regular',
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.text,
-    lineHeight: 18,
+    lineHeight: 20,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -240,21 +244,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingVertical: 9,
+    borderRadius: 11,
+    paddingVertical: 11,
   },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 14,
     color: '#fff',
   },
   clearBtn: { alignItems: 'center', paddingVertical: 2 },
   clearBtnText: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 11,
+    fontSize: 12,
     color: Colors.textTertiary,
     textDecorationLine: 'underline',
   },
