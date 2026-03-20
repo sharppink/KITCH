@@ -108,6 +108,76 @@ criteriaScores는 반드시 아래 순서 그대로 6개 정수 배열로 출력
 - sectorKeywords: 구글 뉴스 검색에 바로 입력할 한국어 키워드 1~3개를 공백으로 구분. 반드시 실제 뉴스 기사 제목에 자주 등장하는 단어를 선택하라. 너무 구체적인 복합어보다 단독으로도 검색 가능한 핵심 단어를 우선하라. 예: "삼성전자 반도체", "테슬라 주가", "코스피 금리", "SK하이닉스", "LG에너지솔루션 배터리"
 - JSON만 응답, 다른 텍스트 금지`;
 
+// 신뢰도 전용 경량 프롬프트 (5회 평균용)
+const CREDIBILITY_ONLY_PROMPT = `당신은 투자 콘텐츠 신뢰도 평가 AI입니다. 주어진 콘텐츠의 신뢰도만 평가하여 다음 JSON 형식으로 정확히 응답하세요:
+{
+  "isInvestmentContent": true 또는 false,
+  "credibilityScore": 숫자(0-100),
+  "criteriaScores": [기준1점수, 기준2점수, 기준3점수, 기준4점수, 기준5점수, 기준6점수]
+}
+
+isInvestmentContent: 투자 관련 정보 포함 시 true, 아니면 false. false이면 credibilityScore=0, criteriaScores=[0,0,0,0,0,0].
+
+=== 신뢰도 점수 산출 방법 ===
+반드시 체크리스트 기반 감점 방식으로 계산하라. 직관적 점수 금지.
+
+[6개 기준] 각각 100점에서 시작하여 감점 적용:
+① 출처 권위도  ② 시점 유효성  ③ 논리적 완결성  ④ 이해관계 투명성  ⑤ 데이터 구체성  ⑥ 교차검증 일치도
+
+[감점 기준] -30(치명적) / -25(매우 높음) / -20(중대) / -15(일반) / -10(경미)
+
+[출처 권위도] -30: 실명/법인 확인 불가 | -25: 전문성 없음 | -20: 신규 계정 | -15: 허위정보 이력 | -10: 개인 의견 중심
+[시점 유효성] -30: 이미 반영된 정보 | -25: 이벤트 종료 | -20: 오래된 정보 | -15: 과거 재가공 | -10: 작성 시점 불명확
+[논리적 완결성] -30: 인과관계 부족 | -25: 단정적 표현 | -20: 사후 해석 | -15: 리스크 미언급 | -10: 단일 근거 일반화
+[이해관계 투명성] -30: 외부 유입 유도 | -25: 이해관계 미공개 | -20: 조건형 콘텐츠 | -15: 일방적 홍보 | -10: 낚시성
+[데이터 구체성] -30: 핵심 수치 없음 | -25: 시각 자료 없음 | -20: 비교 대상 없음 | -15: 출처 없음 | -10: 분석 없음
+[교차검증 일치도] -30: 외부 데이터 불일치 | -25: 출처 간 충돌 | -20: 논리 충돌 | -15: 시점 불일치 | -10: 비정상 구조
+
+criteriaScores 순서: [출처 권위도, 시점 유효성, 논리적 완결성, 이해관계 투명성, 데이터 구체성, 교차검증 일치도]
+credibilityScore = round(출처권위도×0.408 + 시점유효성×0.242 + 논리완결성×0.158 + 이해관계×0.103 + 데이터구체성×0.061 + 교차검증×0.028)
+JSON만 응답, 다른 텍스트 금지`;
+
+// 신뢰도 N회 병렬 실행
+async function runCredibilityRounds(
+  userContent: string | object[],
+  rounds = 4
+): Promise<Array<{ credibilityScore: number; criteriaScores: number[] }>> {
+  const calls = Array.from({ length: rounds }, () =>
+    openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 512,
+      temperature: 0.5,
+      messages: [
+        { role: "system", content: CREDIBILITY_ONLY_PROMPT },
+        { role: "user", content: userContent as any },
+      ],
+    }).then(c => {
+      const p = extractJSON(c.choices[0]?.message?.content ?? "{}");
+      if (typeof p.credibilityScore === "number" && Array.isArray(p.criteriaScores) && p.criteriaScores.length === 6)
+        return { credibilityScore: p.credibilityScore, criteriaScores: p.criteriaScores as number[] };
+      return null;
+    }).catch(() => null)
+  );
+  const results = await Promise.all(calls);
+  return results.filter(Boolean) as Array<{ credibilityScore: number; criteriaScores: number[] }>;
+}
+
+// 신뢰도 평균 계산
+function averageCredibility(
+  main: { credibilityScore: number; criteriaScores: number[] },
+  extras: Array<{ credibilityScore: number; criteriaScores: number[] }>
+): { credibilityScore: number; criteriaScores: number[] } {
+  const all = [main, ...extras].filter(
+    r => typeof r.credibilityScore === "number" && Array.isArray(r.criteriaScores) && r.criteriaScores.length === 6
+  );
+  if (all.length <= 1) return main;
+  const avgScore = Math.round(all.reduce((s, r) => s + r.credibilityScore, 0) / all.length);
+  const avgCriteria = Array.from({ length: 6 }, (_, i) =>
+    Math.round(all.reduce((s, r) => s + (r.criteriaScores[i] ?? 0), 0) / all.length)
+  );
+  return { credibilityScore: avgScore, criteriaScores: avgCriteria };
+}
+
 function extractTweetId(url: string): string | null {
   const match = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
   return match ? match[1] : null;
@@ -301,24 +371,29 @@ router.post("/news", async (req, res) => {
       .trim()
       .slice(0, 4000); // 토큰 절약
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 8192,
-      temperature: 0.5,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `다음 뉴스 기사를 투자 관점에서 분석해주세요.\n\n제목: ${title}\nURL: ${url}\n\n내용:\n${cleanText}`,
-        },
-      ],
-    });
+    const newsUserContent = `다음 뉴스 기사를 투자 관점에서 분석해주세요.\n\n제목: ${title}\nURL: ${url}\n\n내용:\n${cleanText}`;
+    const [completion, extraCredibility] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 8192,
+        temperature: 0.5,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: newsUserContent },
+        ],
+      }),
+      runCredibilityRounds(newsUserContent),
+    ]);
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const parsed = extractJSON(raw);
+    const avgCred = parsed.isInvestmentContent
+      ? averageCredibility({ credibilityScore: parsed.credibilityScore ?? 0, criteriaScores: parsed.criteriaScores ?? [0,0,0,0,0,0] }, extraCredibility)
+      : { credibilityScore: 0, criteriaScores: [0,0,0,0,0,0] };
 
     res.json({
       ...parsed,
+      ...avgCred,
       contentType: "news",
       sourceTitle: parsed.sourceTitle || title,
       analyzedAt: new Date().toISOString(),
@@ -494,24 +569,29 @@ router.post("/youtube", async (req, res) => {
       contentForAnalysis = `[자막·설명 불러오기 실패 — 제목 기반 분석]\n제목에서 파악 가능한 투자 정보를 최대한 분석하세요. 정보가 제한적임을 요약에 반영하세요.`;
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 8192,
-      temperature: 0.5,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${displayTitle}\n채널: ${channelName || "알 수 없음"}\nURL: ${url}\n\n${contentForAnalysis}`,
-        },
-      ],
-    });
+    const ytUserContent = `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${displayTitle}\n채널: ${channelName || "알 수 없음"}\nURL: ${url}\n\n${contentForAnalysis}`;
+    const [completion, extraCredibility] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 8192,
+        temperature: 0.5,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: ytUserContent },
+        ],
+      }),
+      runCredibilityRounds(ytUserContent),
+    ]);
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const parsed = extractJSON(raw);
+    const avgCred = parsed.isInvestmentContent
+      ? averageCredibility({ credibilityScore: parsed.credibilityScore ?? 0, criteriaScores: parsed.criteriaScores ?? [0,0,0,0,0,0] }, extraCredibility)
+      : { credibilityScore: 0, criteriaScores: [0,0,0,0,0,0] };
 
     res.json({
       ...parsed,
+      ...avgCred,
       contentType: "youtube",
       sourceTitle: parsed.sourceTitle || displayTitle,
       analyzedAt: new Date().toISOString(),
@@ -563,24 +643,29 @@ router.post("/twitter", async (req, res) => {
       return;
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 8192,
-      temperature: 0.5,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `다음 트위터(X) 게시물을 투자 관점에서 분석해주세요.\n\n작성자: ${authorName}\nURL: ${url}\n\n트윗 내용:\n${tweetText}`,
-        },
-      ],
-    });
+    const twitterUserContent = `다음 트위터(X) 게시물을 투자 관점에서 분석해주세요.\n\n작성자: ${authorName}\nURL: ${url}\n\n트윗 내용:\n${tweetText}`;
+    const [completion, extraCredibility] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 8192,
+        temperature: 0.5,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: twitterUserContent },
+        ],
+      }),
+      runCredibilityRounds(twitterUserContent),
+    ]);
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const parsed = extractJSON(raw);
+    const avgCred = parsed.isInvestmentContent
+      ? averageCredibility({ credibilityScore: parsed.credibilityScore ?? 0, criteriaScores: parsed.criteriaScores ?? [0,0,0,0,0,0] }, extraCredibility)
+      : { credibilityScore: 0, criteriaScores: [0,0,0,0,0,0] };
 
     res.json({
       ...parsed,
+      ...avgCred,
       contentType: "twitter",
       sourceTitle: parsed.sourceTitle || `@${authorName}의 트윗`,
       analyzedAt: new Date().toISOString(),
@@ -600,36 +685,36 @@ router.post("/screenshot", async (req, res) => {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 8192,
-      temperature: 0.5,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "이 투자 관련 스크린샷(차트, 실적표, 보고서 등)을 분석해주세요.",
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`,
-                detail: "high",
-              },
-            },
-          ],
-        },
-      ],
-    });
+    const screenshotUserContent = [
+      { type: "text", text: "이 투자 관련 스크린샷(차트, 실적표, 보고서 등)을 분석해주세요." },
+      { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: "high" } },
+    ];
+    const screenshotCredContent = [
+      { type: "text", text: "이 투자 관련 스크린샷(차트, 실적표, 보고서 등)의 신뢰도를 평가해주세요." },
+      { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: "low" } },
+    ];
+    const [completion, extraCredibility] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 8192,
+        temperature: 0.5,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: screenshotUserContent as any },
+        ],
+      }),
+      runCredibilityRounds(screenshotCredContent),
+    ]);
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const parsed = extractJSON(raw);
+    const avgCred = parsed.isInvestmentContent
+      ? averageCredibility({ credibilityScore: parsed.credibilityScore ?? 0, criteriaScores: parsed.criteriaScores ?? [0,0,0,0,0,0] }, extraCredibility)
+      : { credibilityScore: 0, criteriaScores: [0,0,0,0,0,0] };
 
     res.json({
       ...parsed,
+      ...avgCred,
       contentType: "screenshot",
       sourceTitle: parsed.sourceTitle || "스크린샷 분석",
       analyzedAt: new Date().toISOString(),
