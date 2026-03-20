@@ -137,7 +137,7 @@ export default function ResultScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>분석 결과</Text>
         <TouchableOpacity onPress={handleShare} style={styles.shareButton} activeOpacity={0.7}>
-          <Feather name="share-2" size={18} color="rgba(255,255,255,0.8)" />
+          <Feather name="share" size={18} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>
       </View>
 

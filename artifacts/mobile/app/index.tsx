@@ -49,7 +49,7 @@ function matchesKeyword(item: HistoryItem, q: string): boolean {
   const r = item.result;
   return (
     (r.sourceTitle ?? '').toLowerCase().includes(lower) ||
-    (r.summary ?? []).some((s) => s.toLowerCase().includes(lower)) ||
+    (Array.isArray(r.summary) ? r.summary : []).some((s) => s.toLowerCase().includes(lower)) ||
     (r.sectorTags ?? []).some((t) => t.toLowerCase().includes(lower)) ||
     (r.recommendedStocks ?? []).some(
       (s) => (s.company ?? '').toLowerCase().includes(lower) || (s.ticker ?? '').toLowerCase().includes(lower)
