@@ -58,6 +58,8 @@ function matchesKeyword(item: HistoryItem, q: string): boolean {
   );
 }
 
+const MEMO_FOLDER_ID = '__memo__';
+
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { history, deleteFromHistory, updateFolder } = useAnalysisHistory();
@@ -121,7 +123,9 @@ export default function Home() {
   /* 필터 적용 항목 */
   const filteredItems = useMemo(() =>
     history.filter((item) => {
-      if (activeFolder && item.folderId !== activeFolder) return false;
+      if (activeFolder === MEMO_FOLDER_ID) {
+        if (!item.memo?.trim()) return false;
+      } else if (activeFolder && item.folderId !== activeFolder) return false;
       if (rangeStart) {
         const d = new Date(item.savedAt);
         const itemDay = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -331,6 +335,18 @@ export default function Home() {
 
             {/* 활성 폴더 필터 표시 */}
             {activeFolder && (() => {
+              if (activeFolder === MEMO_FOLDER_ID) {
+                return (
+                  <View style={styles.activeFolderBar}>
+                    <Text style={styles.activeFolderBarEmoji}>📝</Text>
+                    <Text style={styles.activeFolderBarName}>메모 모음</Text>
+                    <TouchableOpacity onPress={() => setActiveFolder(null)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Feather name="x" size={14} color={Colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
               const af = folders.find((f) => f.id === activeFolder);
               return af ? (
                 <View style={styles.activeFolderBar}>
@@ -707,6 +723,34 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
 
+              {/* 메모 모음 시스템 폴더 (고정) */}
+              {(() => {
+                const memoCount = history.filter((h) => h.memo?.trim()).length;
+                const isMemoActive = activeFolder === MEMO_FOLDER_ID;
+                return (
+                  <TouchableOpacity
+                    style={[styles.folderMgrRow, isMemoActive && styles.folderMgrRowActive, { marginBottom: 4 }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setActiveFolder(isMemoActive ? null : MEMO_FOLDER_ID);
+                      setShowFolderManager(false);
+                    }}>
+                    <Text style={styles.folderMgrEmoji}>📝</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.folderMgrName, isMemoActive && { color: Colors.primary }]}>메모 모음</Text>
+                      <Text style={styles.folderMgrCount}>{memoCount}개 기록</Text>
+                    </View>
+                    {isMemoActive && <Feather name="check" size={16} color={Colors.primary} style={{ marginRight: 8 }} />}
+                    <View style={styles.systemFolderBadge}>
+                      <Text style={styles.systemFolderBadgeText}>시스템</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })()}
+
+              <View style={styles.folderDivider} />
+
               {/* 폴더 목록 */}
               {folders.length === 0 ? (
                 <View style={styles.folderEmptyBox}>
@@ -1062,6 +1106,9 @@ const styles = StyleSheet.create({
   folderMgrEmoji: { fontSize: 22, width: 32, textAlign: 'center' },
   folderMgrName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
   folderMgrCount: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary },
+  folderDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 8 },
+  systemFolderBadge: { backgroundColor: Colors.primaryBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: Colors.primary + '40' },
+  systemFolderBadgeText: { fontSize: 10, color: Colors.primary, fontFamily: 'Inter_600SemiBold' },
   folderEmptyBox: { alignItems: 'center', paddingVertical: 24, gap: 8 },
   folderEmptyText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
   goFolderMgrBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },

@@ -13,6 +13,7 @@ export interface AnalysisResult {
   summary: string[];
   detailedSummary?: string;
   credibilityScore: number;
+  criteriaScores?: number[];
   sentiment: Sentiment;
   recommendedStocks: StockRecommendation[];
   contentType: ContentType;

@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { Card } from '@/components/Card';
+import { RadarChart } from '@/components/RadarChart';
 import { ProgressBar } from '@/components/ProgressBar';
 import { SentimentBadge } from '@/components/SentimentBadge';
 import { StockPriceSheet } from '@/components/StockPriceSheet';
@@ -125,6 +126,11 @@ export default function ResultScreen() {
   const cannotAnalyze = result.cannotAnalyze === true;
   const geoBlocked = result.geoBlocked === true;
   const credColor = getCredibilityColor(result.credibilityScore);
+  const criteriaScores: number[] = Array.isArray(result.criteriaScores) && result.criteriaScores.length === 6
+    ? result.criteriaScores
+    : [];
+  const belowThresholdCount = criteriaScores.filter((s) => s < 40).length;
+  const isUnreliable = criteriaScores.length === 6 && belowThresholdCount >= 4;
 
   return (
     <View style={styles.container}>
@@ -225,18 +231,25 @@ export default function ResultScreen() {
                       <Text style={styles.infoBtnText}>i</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={[styles.credScore, { color: credColor }]}>
-                    {result.credibilityScore}
-                    <Text style={styles.credScoreMax}>/100</Text>
-                  </Text>
+                  {isUnreliable ? (
+                    <Text style={styles.credScoreWarning}>⚠️ 신뢰성 주의</Text>
+                  ) : (
+                    <Text style={[styles.credScore, { color: credColor }]}>
+                      {result.credibilityScore}
+                      <Text style={styles.credScoreMax}>/100</Text>
+                    </Text>
+                  )}
                 </View>
                 <ProgressBar value={result.credibilityScore} height={10} />
                 <View style={styles.credFooter}>
-                  <Text style={[styles.credLabel, { color: credColor }]}>
-                    {getCredibilityLabel(result.credibilityScore)}
+                  <Text style={[styles.credLabel, { color: isUnreliable ? '#E22C29' : credColor }]}>
+                    {isUnreliable ? '신뢰 불가' : getCredibilityLabel(result.credibilityScore)}
                   </Text>
                   <Text style={styles.credHint}>출처 품질 및 내용 분석 기반</Text>
                 </View>
+                {criteriaScores.length === 6 && (
+                  <RadarChart scores={criteriaScores} />
+                )}
               </>
             )}
           </Card>
@@ -717,6 +730,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, color: Colors.text },
   credScore: { fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: -1 },
   credScoreMax: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
+  credScoreWarning: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#E22C29', letterSpacing: -0.5 },
   credFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   credLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
   credHint: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, flex: 1, textAlign: 'right' },
