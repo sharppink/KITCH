@@ -28,6 +28,7 @@ import { RadarChart } from '@/components/RadarChart';
 import { ProgressBar } from '@/components/ProgressBar';
 import { SentimentBadge } from '@/components/SentimentBadge';
 import { StockPriceSheet } from '@/components/StockPriceSheet';
+import { SaveContentSheet } from '@/components/SaveContentSheet';
 import { StockPriceRow } from '@/components/StockPriceRow';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { AnalysisResult, StockRecommendation } from '@/services/aiAnalysis';
@@ -64,6 +65,7 @@ export default function ResultScreen() {
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoEditText, setMemoEditText] = useState('');
   const [showRadarChart, setShowRadarChart] = useState(false);
+  const [showSaveSheet, setShowSaveSheet] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -696,7 +698,7 @@ export default function ResultScreen() {
           </View>
 
           {/* 추가 분석 버튼 */}
-          <TouchableOpacity style={styles.analyzeAnotherButton} onPress={() => router.push('/analyze-sheet')} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.analyzeAnotherButton} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowSaveSheet(true); }} activeOpacity={0.8}>
             <Feather name="plus-circle" size={16} color={Colors.primary} />
             <Text style={styles.analyzeAnotherText}>다른 콘텐츠 분석하기</Text>
           </TouchableOpacity>
@@ -707,6 +709,7 @@ export default function ResultScreen() {
         visible={showStockSheet}
         onClose={() => setShowStockSheet(false)}
       />
+      <SaveContentSheet visible={showSaveSheet} onClose={() => setShowSaveSheet(false)} />
       <KiwoomBottomBar />
     </View>
   );
