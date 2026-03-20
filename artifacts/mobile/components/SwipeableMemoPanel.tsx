@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   PanResponder,
   StyleSheet,
   Text,
@@ -13,9 +12,9 @@ import {
 } from 'react-native';
 import Colors from '@/constants/colors';
 
-const PANEL_WIDTH = 220;
-const HANDLE_WIDTH = 26;
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const PANEL_WIDTH = 200;
+const HANDLE_WIDTH = 24;
+const PANEL_HEIGHT = 180;
 
 interface Props {
   memo: string;
@@ -156,8 +155,8 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 160,
-    bottom: 160,
+    bottom: 88,
+    height: PANEL_HEIGHT,
     right: 0,
     width: HANDLE_WIDTH + PANEL_WIDTH,
     flexDirection: 'row',
