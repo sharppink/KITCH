@@ -24,6 +24,7 @@ import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { useFolders } from '@/hooks/useFolders';
 import { HistoryCard } from '@/components/HistoryCard';
 import { HistoryItem } from '@/hooks/useAnalysisHistory';
+import { SaveContentSheet } from '@/components/SaveContentSheet';
 
 const DATE_FILTERS = [
   { key: 'all',   label: '전체' },
@@ -75,6 +76,10 @@ export default function Home() {
   const [showAlarmSheet, setShowAlarmSheet] = useState(false);
   const [alarmEnabled, setAlarmEnabled]     = useState(false);
 
+  /* 저장 시트 */
+  const [showSaveSheet, setShowSaveSheet]     = useState(false);
+  const [saveSheetType, setSaveSheetType]     = useState<'news' | 'youtube' | 'twitter'>('news');
+
   /* 폴더 관리 시트 */
   const [showFolderManager, setShowFolderManager] = useState(false);
   const [newFolderName, setNewFolderName]         = useState('');
@@ -105,8 +110,10 @@ export default function Home() {
   const handleViewResult  = (item: HistoryItem) =>
     router.push({ pathname: '/result', params: { historyId: item.id, cached: 'true' } });
 
-  const handleQuickAnalyze = (type: string) =>
-    router.push({ pathname: '/input', params: { type } });
+  const handleQuickAnalyze = (type: string) => {
+    setSaveSheetType(type as 'news' | 'youtube' | 'twitter');
+    setShowSaveSheet(true);
+  };
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');
@@ -412,11 +419,18 @@ export default function Home() {
       {/* FAB */}
       <View style={styles.fabContainer}>
         <TouchableOpacity style={styles.fab} activeOpacity={0.85}
-          onPress={() => router.push('/analyze-sheet')}>
+          onPress={() => { setSaveSheetType('news'); setShowSaveSheet(true); }}>
           <Feather name="plus" size={17} color="#fff" />
           <Text style={styles.fabText}>콘텐츠 저장하기</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 저장 시트 */}
+      <SaveContentSheet
+        visible={showSaveSheet}
+        initialType={saveSheetType}
+        onClose={() => setShowSaveSheet(false)}
+      />
 
       {/* ── 날짜 선택 캘린더 시트 ── */}
       <Modal visible={showDatePicker} transparent animationType="slide"
