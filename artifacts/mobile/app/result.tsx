@@ -29,6 +29,7 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { SentimentBadge } from '@/components/SentimentBadge';
 import { StockPriceSheet } from '@/components/StockPriceSheet';
 import { SaveContentSheet } from '@/components/SaveContentSheet';
+import { SwipeableMemoPanel } from '@/components/SwipeableMemoPanel';
 import { StockPriceRow } from '@/components/StockPriceRow';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { AnalysisResult, StockRecommendation } from '@/services/aiAnalysis';
@@ -723,6 +724,15 @@ export default function ResultScreen() {
         onClose={() => setShowStockSheet(false)}
       />
       <SaveContentSheet visible={showSaveSheet} onClose={() => setShowSaveSheet(false)} />
+      {result && historyId && (
+        <SwipeableMemoPanel
+          memo={memo}
+          onSave={async (text) => {
+            await updateMemo(historyId, text);
+            setMemo(text);
+          }}
+        />
+      )}
       <KiwoomBottomBar />
     </View>
   );
