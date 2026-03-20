@@ -12,6 +12,7 @@ export interface StockRecommendation {
 export interface AnalysisResult {
   summary: string[];
   detailedSummary?: string;
+  isInvestmentContent?: boolean;
   credibilityScore: number;
   criteriaScores?: number[];
   sentiment: Sentiment;

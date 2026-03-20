@@ -224,15 +224,19 @@ export default function ResultScreen() {
                 <View style={styles.credHeader}>
                   <View style={styles.credTitleRow}>
                     <Text style={styles.cardTitle}>신뢰도 점수</Text>
-                    <TouchableOpacity
-                      style={styles.infoBtn}
-                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowCredInfo(true); }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Text style={styles.infoBtnText}>i</Text>
-                    </TouchableOpacity>
+                    {result.isInvestmentContent !== false && (
+                      <TouchableOpacity
+                        style={styles.infoBtn}
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowCredInfo(true); }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.infoBtnText}>i</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  {isUnreliable ? (
+                  {result.isInvestmentContent === false ? (
+                    <Text style={styles.credScoreNA}>판단 불가</Text>
+                  ) : isUnreliable ? (
                     <Text style={styles.credScoreWarning}>⚠️ 신뢰성 주의</Text>
                   ) : (
                     <Text style={[styles.credScore, { color: credColor }]}>
@@ -241,25 +245,31 @@ export default function ResultScreen() {
                     </Text>
                   )}
                 </View>
-                <ProgressBar value={result.credibilityScore} height={10} />
-                <View style={styles.credFooter}>
-                  <Text style={[styles.credLabel, { color: isUnreliable ? '#E22C29' : credColor }]}>
-                    {isUnreliable ? '신뢰 불가' : getCredibilityLabel(result.credibilityScore)}
-                  </Text>
-                  <Text style={styles.credHint}>출처 품질 및 내용 분석 기반</Text>
-                </View>
-                {criteriaScores.length === 6 && (
+                {result.isInvestmentContent === false ? (
+                  <View style={styles.credNABox}>
+                    <Feather name="slash" size={14} color={Colors.textTertiary} />
+                    <Text style={styles.credNAText}>투자 정보가 없는 콘텐츠는{'\n'}신뢰도를 산출하지 않습니다.</Text>
+                  </View>
+                ) : (
                   <>
-                    <TouchableOpacity
-                      style={styles.radarToggleBtn}
-                      onPress={() => { Haptics.selectionAsync(); setShowRadarChart(v => !v); }}
-                      activeOpacity={0.75}
-                    >
-                      <Feather name="activity" size={13} color={Colors.primary} />
-                      <Text style={styles.radarToggleText}>6대 항목 레이더 차트</Text>
-                      <Feather name={showRadarChart ? 'chevron-up' : 'chevron-down'} size={14} color={Colors.primary} />
-                    </TouchableOpacity>
-                    {showRadarChart && <RadarChart scores={criteriaScores} />}
+                    <ProgressBar value={result.credibilityScore} height={10} />
+                    <View style={styles.credFooter}>
+                      <Text style={[styles.credLabel, { color: isUnreliable ? '#E22C29' : credColor }]}>
+                        {isUnreliable ? '신뢰 불가' : getCredibilityLabel(result.credibilityScore)}
+                      </Text>
+                    </View>
+                    {criteriaScores.length === 6 && (
+                      <>
+                        <TouchableOpacity
+                          style={styles.radarToggleBtn}
+                          onPress={() => { Haptics.selectionAsync(); setShowRadarChart(v => !v); }}
+                          activeOpacity={0.75}
+                        >
+                          <Feather name={showRadarChart ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.primary} />
+                        </TouchableOpacity>
+                        {showRadarChart && <RadarChart scores={criteriaScores} />}
+                      </>
+                    )}
                   </>
                 )}
               </>
@@ -743,8 +753,11 @@ const styles = StyleSheet.create({
   credScore: { fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: -1 },
   credScoreMax: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
   credScoreWarning: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#E22C29', letterSpacing: -0.5 },
-  radarToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: Colors.primary + '30', alignSelf: 'stretch', justifyContent: 'center', marginTop: 4 },
+  radarToggleBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 4, marginTop: 2 },
   radarToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.primary, flex: 1, textAlign: 'center' },
+  credScoreNA: { fontFamily: 'Inter_700Bold', fontSize: 18, color: Colors.textTertiary, letterSpacing: -0.3 },
+  credNABox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.bg, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, marginTop: 2 },
+  credNAText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary, lineHeight: 18 },
   credFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   credLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
   credHint: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, flex: 1, textAlign: 'right' },
