@@ -114,11 +114,11 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
   };
 
   return (
-    <Animated.View style={[styles.outerContainer, { bottom: bottomAnim }]}>
+    <Animated.View style={[styles.outerContainer, { bottom: bottomAnim }]} pointerEvents="box-none">
     <Animated.View
       style={[styles.container, { transform: [{ translateX }] }]}
-      {...panResponder.panHandlers}
     >
+      <View style={styles.content} {...panResponder.panHandlers}>
       {/* Handle wrapper — 하단 정렬된 작은 탭 */}
       <View style={styles.handleWrapper}>
         <TouchableOpacity
@@ -181,6 +181,7 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
           </TouchableOpacity>
         )}
       </View>
+      </View>
     </Animated.View>
     </Animated.View>
   );
@@ -195,6 +196,9 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   container: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
     flexDirection: 'row',
   },
