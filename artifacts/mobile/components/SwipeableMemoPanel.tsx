@@ -3,7 +3,10 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
+  KeyboardEvent,
   PanResponder,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +27,7 @@ interface Props {
 
 export function SwipeableMemoPanel({ memo, onSave }: Props) {
   const translateX = useRef(new Animated.Value(PANEL_WIDTH)).current;
+  const bottomAnim = useRef(new Animated.Value(88)).current;
   const startX = useRef(PANEL_WIDTH);
   const isOpen = useRef(false);
   const [editText, setEditText] = useState(memo);
@@ -31,6 +35,33 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
   useEffect(() => {
     setEditText(memo);
   }, [memo]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: KeyboardEvent) => {
+      Animated.timing(bottomAnim, {
+        toValue: e.endCoordinates.height + 8,
+        duration: Platform.OS === 'ios' ? e.duration || 250 : 180,
+        useNativeDriver: false,
+      }).start();
+    };
+    const onHide = (e: KeyboardEvent) => {
+      Animated.timing(bottomAnim, {
+        toValue: 88,
+        duration: Platform.OS === 'ios' ? e.duration || 250 : 180,
+        useNativeDriver: false,
+      }).start();
+    };
+
+    const subShow = Keyboard.addListener(showEvent, onShow);
+    const subHide = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, []);
 
   const animateOpen = () => {
     isOpen.current = true;
@@ -84,7 +115,7 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
 
   return (
     <Animated.View
-      style={[styles.container, { transform: [{ translateX }] }]}
+      style={[styles.container, { bottom: bottomAnim, transform: [{ translateX }] }]}
       {...panResponder.panHandlers}
     >
       {/* Handle wrapper — 하단 정렬된 작은 탭 */}
@@ -156,7 +187,6 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 88,
     height: PANEL_HEIGHT,
     right: 0,
     width: HANDLE_WIDTH + PANEL_WIDTH,
