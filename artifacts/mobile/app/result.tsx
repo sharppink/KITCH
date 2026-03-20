@@ -63,6 +63,7 @@ export default function ResultScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoEditText, setMemoEditText] = useState('');
+  const [showRadarChart, setShowRadarChart] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -248,7 +249,18 @@ export default function ResultScreen() {
                   <Text style={styles.credHint}>출처 품질 및 내용 분석 기반</Text>
                 </View>
                 {criteriaScores.length === 6 && (
-                  <RadarChart scores={criteriaScores} />
+                  <>
+                    <TouchableOpacity
+                      style={styles.radarToggleBtn}
+                      onPress={() => { Haptics.selectionAsync(); setShowRadarChart(v => !v); }}
+                      activeOpacity={0.75}
+                    >
+                      <Feather name="activity" size={13} color={Colors.primary} />
+                      <Text style={styles.radarToggleText}>6대 항목 레이더 차트</Text>
+                      <Feather name={showRadarChart ? 'chevron-up' : 'chevron-down'} size={14} color={Colors.primary} />
+                    </TouchableOpacity>
+                    {showRadarChart && <RadarChart scores={criteriaScores} />}
+                  </>
                 )}
               </>
             )}
@@ -281,7 +293,7 @@ export default function ResultScreen() {
                   <Text style={styles.formulaTitle}>📐 ROC 가중치법</Text>
                   <View style={styles.formulaBox}>
                     <Text style={styles.formulaText}>
-                      신뢰도 = 각 기준별 점수 × ROC 가중치의 합산{'\n'}(기준별 점수: 부정 지표 해당 시 차감, 최솟값 5점)
+                      신뢰도 = 각 기준별 점수 × ROC 가중치의 합산{'\n'}(기준별 점수: 부정 지표 해당 시 차감)
                     </Text>
                   </View>
                 </View>
@@ -731,6 +743,8 @@ const styles = StyleSheet.create({
   credScore: { fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: -1 },
   credScoreMax: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
   credScoreWarning: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#E22C29', letterSpacing: -0.5 },
+  radarToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: Colors.primary + '30', alignSelf: 'stretch', justifyContent: 'center', marginTop: 4 },
+  radarToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.primary, flex: 1, textAlign: 'center' },
   credFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   credLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
   credHint: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, flex: 1, textAlign: 'right' },
