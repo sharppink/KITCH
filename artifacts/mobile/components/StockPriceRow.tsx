@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
     width: 8, height: 8, borderRadius: 4, flexShrink: 0,
   },
   stockInfo: { flex: 1, gap: 2, minWidth: 0 },
-  companyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  company: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text, flex: 1 },
+  companyRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  company: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text, flexShrink: 1 },
   ticker: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
-  relevanceBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  relevanceBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
   relevanceText: { fontFamily: 'Inter_600SemiBold', fontSize: 10 },
 
   priceSection: { alignItems: 'flex-end', gap: 3 },
