@@ -196,7 +196,7 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
                 {selectedType === 'news'
                   ? '기사 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'
                   : selectedType === 'youtube'
-                  ? '유튜브 앱에서 공유 → 링크 복사 후 붙여넣거나, URL을 직접 입력하세요.'
+                  ? '유튜브 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'
                   : '트위터(X) 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'}
               </Text>
             </View>

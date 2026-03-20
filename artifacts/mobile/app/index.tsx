@@ -552,6 +552,7 @@ export default function Home() {
                     if (!day) return <View key={di} style={styles.calCell} />;
                     const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                     const isToday     = ds === todayStr;
+                    const isFuture    = ds > todayStr;
                     const isStart     = ds === rangeStart;
                     const isEnd       = ds === rangeEnd;
                     const isEndpoint  = isStart || isEnd;
@@ -567,23 +568,21 @@ export default function Home() {
                       : undefined;
 
                     return (
-                      <TouchableOpacity key={di} style={[styles.calCell, rangeBg]}
+                      <TouchableOpacity key={di}
+                        style={[styles.calCell, rangeBg, isFuture && styles.calCellFuture]}
+                        disabled={isFuture}
                         onPress={() => {
                           Haptics.selectionAsync();
                           setDateFilter('all');
                           if (rangeEditMode === 'start') {
                             setRangeStart(ds);
-                            // 기존 종료일이 새 시작일보다 이전이면 초기화
                             if (rangeEnd && ds > rangeEnd) setRangeEnd(null);
                             setRangeEditMode('end');
                           } else {
-                            // 종료일 편집 모드
                             if (rangeStart && ds < rangeStart) {
-                              // 시작일보다 앞을 누르면 → 새 시작일로 설정, 종료일 유지
                               setRangeStart(ds);
                               setRangeEditMode('end');
                             } else if (ds === rangeEnd) {
-                              // 같은 종료일 다시 누르면 → 종료일 초기화
                               setRangeEnd(null);
                             } else {
                               setRangeEnd(ds);
@@ -599,15 +598,16 @@ export default function Home() {
                         ]}>
                           <Text style={[
                             styles.calDay,
-                            isEndpoint && { color: '#fff', fontFamily: 'Inter_700Bold' },
-                            !isEndpoint && isToday && { color: Colors.primary, fontFamily: 'Inter_700Bold' },
-                            !isEndpoint && !isToday && isSun && { color: '#E22C29' },
-                            !isEndpoint && !isToday && isSat && { color: '#0052CC' },
-                            !!inRange && { color: Colors.primary, fontFamily: 'Inter_600SemiBold' },
+                            isFuture && styles.calDayFuture,
+                            !isFuture && isEndpoint && { color: '#fff', fontFamily: 'Inter_700Bold' },
+                            !isFuture && !isEndpoint && isToday && { color: Colors.primary, fontFamily: 'Inter_700Bold' },
+                            !isFuture && !isEndpoint && !isToday && isSun && { color: '#E22C29' },
+                            !isFuture && !isEndpoint && !isToday && isSat && { color: '#0052CC' },
+                            !isFuture && !!inRange && { color: Colors.primary, fontFamily: 'Inter_600SemiBold' },
                           ]}>{day}</Text>
                         </View>
-                        {hasDot && !isEndpoint && <View style={[styles.calDot, inRange ? { backgroundColor: Colors.primary } : undefined]} />}
-                        {hasDot && isEndpoint && <View style={[styles.calDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />}
+                        {hasDot && !isEndpoint && !isFuture && <View style={[styles.calDot, inRange ? { backgroundColor: Colors.primary } : undefined]} />}
+                        {hasDot && isEndpoint && !isFuture && <View style={[styles.calDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />}
                       </TouchableOpacity>
                     );
                   })}
@@ -993,6 +993,8 @@ const styles = StyleSheet.create({
   calDayBgSelected: { backgroundColor: Colors.primary },
   calDayBgToday: { backgroundColor: Colors.primaryBg },
   calDay: { fontFamily: 'Inter_500Medium', fontSize: 14, color: Colors.text },
+  calDayFuture: { color: Colors.border },
+  calCellFuture: { opacity: 0.35 },
   calDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.primary, marginTop: 2 },
 
   /* 날짜 초기화 */
