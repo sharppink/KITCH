@@ -105,7 +105,7 @@ criteriaScores는 반드시 아래 순서 그대로 6개 정수 배열로 출력
   low — 섹터 유사성 또는 매크로 환경 연관성만 있는 간접 관련 종목
   [국내/해외 비율] 국내(KRX) 2개 + 해외(US) 1개 조합을 기본으로 하되, 콘텐츠가 해외 전용이면 해외 2개 + 국내 1개도 허용. 단, 관련성 기준을 충족하는 종목이 부족하면 비율 조건보다 품질 우선
 - sectorTags: 2~3개의 한국어 섹터·테마 태그. 예: "반도체", "2차전지", "AI/데이터센터", "바이오", "금융", "부동산", "원자재", "ETF", "금리", "환율", "방산", "전력/에너지", "소비재" 등
-- sectorKeywords: 관련 뉴스 검색에 쓸 핵심 한국어 키워드 1~3개를 공백으로 구분. 예: "삼성전자 반도체 HBM", "테슬라 전기차", "코스피 금리"
+- sectorKeywords: 구글 뉴스 검색에 바로 입력할 한국어 키워드 1~3개를 공백으로 구분. 반드시 실제 뉴스 기사 제목에 자주 등장하는 단어를 선택하라. 너무 구체적인 복합어보다 단독으로도 검색 가능한 핵심 단어를 우선하라. 예: "삼성전자 반도체", "테슬라 주가", "코스피 금리", "SK하이닉스", "LG에너지솔루션 배터리"
 - JSON만 응답, 다른 텍스트 금지`;
 
 function extractTweetId(url: string): string | null {
@@ -648,29 +648,15 @@ router.get("/sector/news", async (req, res) => {
     return;
   }
 
-  try {
-    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q.trim())}&hl=ko&gl=KR&ceid=KR:ko`;
-    const response = await fetch(rssUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Accept": "application/rss+xml, application/xml, text/xml",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    const xml = await response.text();
-
-    // 간단 RSS 파싱 (regex 기반 — cheerio xmlMode의 link 파싱 한계 우회)
+  const parseRSS = (xml: string, limit = 6) => {
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     const titleRegex = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/;
     const linkRegex = /<link>([\s\S]*?)<\/link>/;
     const pubDateRegex = /<pubDate>([\s\S]*?)<\/pubDate>/;
     const sourceRegex = /<source[^>]*>([\s\S]*?)<\/source>/;
-
     const news: { title: string; source: string; url: string; publishedAt: string }[] = [];
     let m: RegExpExecArray | null;
-
-    while ((m = itemRegex.exec(xml)) !== null && news.length < 5) {
+    while ((m = itemRegex.exec(xml)) !== null && news.length < limit) {
       const block = m[1];
       const rawTitle = block.match(titleRegex)?.[1]?.trim() ?? "";
       const url = block.match(linkRegex)?.[1]?.trim() ?? "";
@@ -678,14 +664,43 @@ router.get("/sector/news", async (req, res) => {
       const source = block.match(sourceRegex)?.[1]?.trim() ??
         rawTitle.match(/\s-\s([^-]+)$/)?.[1]?.trim() ?? "";
       const title = rawTitle.replace(/\s-\s[^-]+$/, "").trim();
+      if (title) news.push({
+        title, source, url,
+        publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+      });
+    }
+    return news;
+  };
 
-      if (title) {
-        news.push({
-          title,
-          source,
-          url,
-          publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
-        });
+  const fetchRSS = async (query: string) => {
+    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
+    const response = await fetch(rssUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/rss+xml, application/xml, text/xml",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    return response.text();
+  };
+
+  try {
+    // 1차: 원본 쿼리 전체
+    const xml1 = await fetchRSS(q.trim());
+    let news = parseRSS(xml1, 6);
+
+    // 2차: 첫 번째 키워드만으로 폴백
+    if (news.length < 2) {
+      const firstKeyword = q.trim().split(/\s+/)[0];
+      if (firstKeyword && firstKeyword !== q.trim()) {
+        const xml2 = await fetchRSS(firstKeyword);
+        const fallback = parseRSS(xml2, 6);
+        // 기존 결과 + 폴백 결과 합쳐서 중복 제거
+        const seen = new Set(news.map(n => n.title));
+        for (const item of fallback) {
+          if (!seen.has(item.title)) { news.push(item); seen.add(item.title); }
+          if (news.length >= 6) break;
+        }
       }
     }
 
