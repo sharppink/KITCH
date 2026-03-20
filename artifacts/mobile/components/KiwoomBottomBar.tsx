@@ -1,11 +1,27 @@
 // 키움증권 스타일 하단 바 (모든 화면 공통)
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TABS = ['종합뉴스', '투자정보', '주식분석', '투자자별', '뉴스검색', '리서치'];
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : 'http://localhost:8080/api';
+
+interface KospiData {
+  name: string;
+  price: number;
+  change: number;
+  changePct: number;
+  isUp: boolean;
+}
+
+function formatNum(n: number, decimals = 2) {
+  return n.toLocaleString('ko-KR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
 
 interface Props {
   activeTab?: string;
@@ -13,6 +29,33 @@ interface Props {
 
 export function KiwoomBottomBar({ activeTab }: Props) {
   const insets = useSafeAreaInsets();
+  const [kospi, setKospi] = useState<KospiData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchKospi = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/market/kospi`);
+      if (res.ok) {
+        const data = await res.json();
+        setKospi(data);
+      }
+    } catch {}
+    finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKospi();
+    intervalRef.current = setInterval(fetchKospi, 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const priceColor = kospi ? (kospi.isUp ? '#E22C29' : '#0052CC') : '#1A1A2E';
+  const arrow = kospi ? (kospi.isUp ? '▲' : '▼') : '';
 
   return (
     <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
@@ -22,14 +65,25 @@ export function KiwoomBottomBar({ activeTab }: Props) {
           <Text style={styles.tickerBadgeText}>지수</Text>
         </View>
         <Text style={styles.tickerLabel}>코스피</Text>
-        <Text style={styles.tickerValue}>5,684.32</Text>
-        <Text style={styles.tickerUp}>▲ 134.47</Text>
-        <Text style={styles.tickerUpPct}>2.42%</Text>
+        {loading ? (
+          <ActivityIndicator size="small" color="#64647A" style={{ marginLeft: 4 }} />
+        ) : kospi ? (
+          <>
+            <Text style={styles.tickerValue}>{formatNum(kospi.price)}</Text>
+            <Text style={[styles.tickerChange, { color: priceColor }]}>
+              {arrow} {formatNum(Math.abs(kospi.change))}
+            </Text>
+            <Text style={[styles.tickerChange, { color: priceColor }]}>
+              {formatNum(Math.abs(kospi.changePct))}%
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.tickerValue}>—</Text>
+        )}
       </View>
 
       {/* 탭 줄 */}
       <View style={styles.tabRow}>
-        {/* 메뉴 버튼 */}
         <TouchableOpacity
           style={styles.menuBtn}
           onPress={() => router.push('/kiwoom-menu')}
@@ -39,7 +93,6 @@ export function KiwoomBottomBar({ activeTab }: Props) {
           <Text style={styles.menuBtnText}>메뉴</Text>
         </TouchableOpacity>
 
-        {/* 스크롤 가능한 탭 목록 */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -89,8 +142,7 @@ const styles = StyleSheet.create({
   tickerBadgeText: { fontSize: 10, color: '#0052CC', fontWeight: '700' },
   tickerLabel: { fontSize: 12, color: '#1A1A2E', fontWeight: '500' },
   tickerValue: { fontSize: 12, color: '#1A1A2E', fontWeight: '700' },
-  tickerUp: { fontSize: 12, color: '#E22C29', fontWeight: '600' },
-  tickerUpPct: { fontSize: 12, color: '#E22C29', fontWeight: '600' },
+  tickerChange: { fontSize: 12, fontWeight: '600' },
 
   /* 탭 줄 */
   tabRow: {
