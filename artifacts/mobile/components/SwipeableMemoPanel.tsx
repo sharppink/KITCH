@@ -114,8 +114,9 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
   };
 
   return (
+    <Animated.View style={[styles.outerContainer, { bottom: bottomAnim }]}>
     <Animated.View
-      style={[styles.container, { bottom: bottomAnim, transform: [{ translateX }] }]}
+      style={[styles.container, { transform: [{ translateX }] }]}
       {...panResponder.panHandlers}
     >
       {/* Handle wrapper — 하단 정렬된 작은 탭 */}
@@ -181,17 +182,21 @@ export function SwipeableMemoPanel({ memo, onSave }: Props) {
         )}
       </View>
     </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  outerContainer: {
     position: 'absolute',
     height: PANEL_HEIGHT,
     right: 0,
     width: HANDLE_WIDTH + PANEL_WIDTH,
-    flexDirection: 'row',
     zIndex: 999,
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'row',
   },
   handleWrapper: {
     width: HANDLE_WIDTH,
