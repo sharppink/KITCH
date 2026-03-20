@@ -290,22 +290,22 @@ export default function ResultScreen() {
                 <View style={styles.modalDivider} />
 
                 <View style={styles.formulaSection}>
-                  <Text style={styles.formulaTitle}>📐 ROC 가중치법</Text>
+                  <Text style={styles.formulaTitle}>📐 체크리스트 감점 + ROC 가중치법</Text>
                   <View style={styles.formulaBox}>
                     <Text style={styles.formulaText}>
-                      신뢰도 = 각 기준별 점수 × ROC 가중치의 합산{'\n'}(기준별 점수: 부정 지표 해당 시 차감)
+                      각 기준을 100점에서 시작해 결함 항목을 차감(-10~-30){'\n'}→ 6개 기준 점수 × ROC 가중치 합산 = 최종 신뢰도
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.criteriaList}>
                   {[
-                    { icon: '🏛️', label: '출처 권위도 (40.8%)', desc: '말하는 사람이 믿을 만한 전문가인가요? 실명·자격·제도권 소속 여부를 봅니다.' },
-                    { icon: '⏱️', label: '시점 유효성 (24.2%)', desc: '지금 바로 써먹을 수 있는 최신 정보인가요? 정보의 신선도와 시세 선반영 여부를 봅니다.' },
-                    { icon: '🧠', label: '논리적 완결성 (15.8%)', desc: '앞뒤 맥락이 맞고 과장이 없나요? 논리 비약·단정적 선동·리스크 외면 여부를 봅니다.' },
-                    { icon: '🔍', label: '이해관계 투명성 (10.3%)', desc: '광고나 홍보 목적을 숨기고 있지 않나요? 리딩방 유도·협찬 미표기 등을 봅니다.' },
-                    { icon: '📊', label: '데이터 구체성 (6.1%)', desc: '추측이 아닌 실제 숫자나 도표가 있나요? 수치·차트·출처 명기 여부를 봅니다.' },
-                    { icon: '🔄', label: '교차 검증 일치도 (2.7%)', desc: '다른 믿을 만한 곳도 같은 말을 하나요? 외부 팩트와의 정합성을 봅니다.' },
+                    { icon: '🏛️', label: '출처 권위도 (40.8%)', desc: '실명·법인 확인 불가, 전문성 없음, 신규 계정, 허위정보 이력, 개인 의견 중심 여부를 체크합니다.' },
+                    { icon: '⏱️', label: '시점 유효성 (24.2%)', desc: '이미 반영된 정보, 이벤트 종료, 오래된 정보, 과거 재가공, 작성 시점 불명확 여부를 체크합니다.' },
+                    { icon: '🧠', label: '논리적 완결성 (15.8%)', desc: '인과관계 부족, 단정적 표현, 사후 해석, 리스크 미언급, 단일 근거 일반화 여부를 체크합니다.' },
+                    { icon: '🔍', label: '이해관계 투명성 (10.3%)', desc: '외부 유입 유도, 이해관계 미공개, 조건형 콘텐츠, 일방적 홍보, 낚시성 콘텐츠 여부를 체크합니다.' },
+                    { icon: '📊', label: '데이터 구체성 (6.1%)', desc: '핵심 수치 없음, 시각 자료 없음, 비교 대상 없음, 출처 없음, 분석 없음 여부를 체크합니다.' },
+                    { icon: '🔄', label: '교차검증 일치도 (2.8%)', desc: '외부 데이터 불일치, 출처 간 충돌, 논리 충돌, 시점 불일치, 비정상 구조 여부를 체크합니다.' },
                   ].map(item => (
                     <View key={item.label} style={styles.criteriaItem}>
                       <Text style={styles.criteriaIcon}>{item.icon}</Text>
