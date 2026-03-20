@@ -208,7 +208,7 @@ export default function ResultScreen() {
           </Card>
 
           {/* 신뢰도 점수 */}
-          <Card style={styles.credibilityCard} elevated>
+          <Card style={styles.credibilityCard}>
             {cannotAnalyze ? (
               <View style={styles.cannotAnalyzeBox}>
                 <Feather name={geoBlocked ? "globe" : "alert-circle"} size={28} color="#888" style={{ marginBottom: 8 }} />
