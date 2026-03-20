@@ -69,8 +69,8 @@ export function StockPriceSheet({ stock, visible, onClose }: Props) {
           {/* 헤더 */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.ticker}>{stock.ticker}</Text>
               <Text style={styles.company}>{stock.company}</Text>
+              <Text style={styles.ticker}>{stock.ticker}</Text>
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -222,10 +222,10 @@ const styles = StyleSheet.create({
   },
   headerLeft: { gap: 2 },
   ticker: {
-    fontFamily: 'Inter_700Bold', fontSize: 20, color: Colors.text, letterSpacing: 0.5,
+    fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, letterSpacing: 0.3,
   },
   company: {
-    fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary,
+    fontFamily: 'Inter_700Bold', fontSize: 20, color: Colors.text,
   },
   divider: { height: 1, backgroundColor: Colors.border, marginBottom: 20 },
 
