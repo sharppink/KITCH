@@ -78,7 +78,6 @@ export default function Home() {
 
   /* 저장 시트 */
   const [showSaveSheet, setShowSaveSheet]     = useState(false);
-  const [saveSheetType, setSaveSheetType]     = useState<'news' | 'youtube' | 'twitter'>('news');
 
   /* 폴더 관리 시트 */
   const [showFolderManager, setShowFolderManager] = useState(false);
@@ -110,8 +109,7 @@ export default function Home() {
   const handleViewResult  = (item: HistoryItem) =>
     router.push({ pathname: '/result', params: { historyId: item.id, cached: 'true' } });
 
-  const handleQuickAnalyze = (type: string) => {
-    setSaveSheetType(type as 'news' | 'youtube' | 'twitter');
+  const handleQuickAnalyze = () => {
     setShowSaveSheet(true);
   };
 
@@ -259,7 +257,7 @@ export default function Home() {
               ].map((s, i, arr) => (
                 <TouchableOpacity key={s.type}
                   style={[styles.stepRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
-                  activeOpacity={0.75} onPress={() => handleQuickAnalyze(s.type)}>
+                  activeOpacity={0.75} onPress={() => handleQuickAnalyze()}>
                   <View style={[styles.stepIconBg, { backgroundColor: s.bg }]}>
                     <Feather name={s.icon} size={18} color={s.color} />
                   </View>
@@ -420,7 +418,7 @@ export default function Home() {
       {/* FAB */}
       <View style={styles.fabContainer}>
         <TouchableOpacity style={styles.fab} activeOpacity={0.85}
-          onPress={() => { setSaveSheetType('news'); setShowSaveSheet(true); }}>
+          onPress={() => setShowSaveSheet(true)}>
           <Feather name="plus" size={17} color="#fff" />
           <Text style={styles.fabText}>콘텐츠 저장하기</Text>
         </TouchableOpacity>
@@ -429,7 +427,6 @@ export default function Home() {
       {/* 저장 시트 */}
       <SaveContentSheet
         visible={showSaveSheet}
-        initialType={saveSheetType}
         onClose={() => setShowSaveSheet(false)}
       />
 

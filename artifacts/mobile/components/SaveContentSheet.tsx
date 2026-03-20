@@ -7,7 +7,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,59 +22,56 @@ import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 
 type ContentType = 'news' | 'youtube' | 'twitter';
 
-const TYPES: { type: ContentType; label: string; icon: React.ComponentProps<typeof Feather>['name']; placeholder: string; color: string }[] = [
-  { type: 'news',    label: '뉴스',       icon: 'link',    placeholder: 'https://news.einfomax.co.kr/...',     color: Colors.primary },
-  { type: 'youtube', label: '유튜브',     icon: 'youtube', placeholder: 'https://youtu.be/...',               color: '#EF4444'       },
-  { type: 'twitter', label: '트위터(X)', icon: 'twitter', placeholder: 'https://x.com/user/status/123456...', color: '#1D9BF0'       },
-];
+function detectType(url: string): ContentType {
+  if (isValidYouTubeUrl(url)) return 'youtube';
+  if (isValidTwitterUrl(url)) return 'twitter';
+  return 'news';
+}
+
+const TYPE_META: Record<ContentType, { label: string; color: string; icon: React.ComponentProps<typeof Feather>['name'] }> = {
+  news:    { label: '뉴스',      color: Colors.primary, icon: 'link'    },
+  youtube: { label: '유튜브',    color: '#EF4444',      icon: 'youtube' },
+  twitter: { label: '트위터(X)', color: '#1D9BF0',      icon: 'twitter' },
+};
 
 interface Props {
   visible: boolean;
-  initialType?: ContentType;
   onClose: () => void;
 }
 
-export function SaveContentSheet({ visible, initialType = 'news', onClose }: Props) {
+export function SaveContentSheet({ visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { saveToHistory } = useAnalysisHistory();
 
-  const [selectedType, setSelectedType] = useState<ContentType>(initialType);
-  const [inputText, setInputText]       = useState('');
-  const [isAnalyzing, setIsAnalyzing]   = useState(false);
-  const [errorMsg, setErrorMsg]         = useState('');
+  const [inputText, setInputText]     = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [errorMsg, setErrorMsg]       = useState('');
   const inputRef = useRef<TextInput>(null);
 
-  const current = TYPES.find(t => t.type === selectedType)!;
+  const detectedType: ContentType = inputText.trim() ? detectType(inputText.trim()) : 'news';
+  const meta = TYPE_META[detectedType];
+  const hasUrl = inputText.trim().length > 0;
 
   useEffect(() => {
     if (visible) {
-      setSelectedType(initialType);
       setInputText('');
       setErrorMsg('');
       setTimeout(() => inputRef.current?.focus(), 350);
     }
-  }, [visible, initialType]);
+  }, [visible]);
 
   const validate = (): boolean => {
     const url = inputText.trim();
     if (!url) {
-      setErrorMsg(
-        selectedType === 'youtube' ? '유튜브 URL을 입력해주세요.' :
-        selectedType === 'twitter' ? '트위터(X) URL을 입력해주세요.' :
-        '기사 URL을 입력해주세요.'
-      );
+      setErrorMsg('URL을 입력해주세요.');
       return false;
     }
-    if (selectedType === 'youtube' && !isValidYouTubeUrl(url)) {
-      setErrorMsg('올바른 유튜브 URL을 입력해주세요. (예: https://youtu.be/...)');
-      return false;
-    }
-    if (selectedType === 'twitter' && !isValidTwitterUrl(url)) {
-      setErrorMsg('올바른 트위터 URL을 입력해주세요. (예: https://x.com/user/status/...)');
-      return false;
-    }
-    if (selectedType === 'news' && !url.startsWith('http')) {
+    if (!url.startsWith('http')) {
       setErrorMsg('http:// 또는 https://로 시작하는 URL을 입력해주세요.');
+      return false;
+    }
+    if (detectedType === 'twitter' && !isValidTwitterUrl(url)) {
+      setErrorMsg('올바른 트위터 URL을 입력해주세요. (예: https://x.com/user/status/...)');
       return false;
     }
     return true;
@@ -92,10 +88,10 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
     try {
       const url = inputText.trim();
       let result;
-      if (selectedType === 'youtube') {
+      if (detectedType === 'youtube') {
         const videoId = extractVideoId(url)!;
         result = await analyzeYouTube(videoId, url);
-      } else if (selectedType === 'twitter') {
+      } else if (detectedType === 'twitter') {
         result = await analyzeTwitter(url);
       } else {
         result = await analyzeNewsLink(url);
@@ -114,7 +110,7 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <AnalysisLoadingOverlay visible={isAnalyzing} contentType={selectedType} />
+      <AnalysisLoadingOverlay visible={isAnalyzing} contentType={detectedType} />
       <Pressable style={styles.overlay} onPress={onClose}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -135,29 +131,6 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
               </TouchableOpacity>
             </View>
 
-            {/* 타입 탭 */}
-            <View style={styles.typeTabs}>
-              {TYPES.map(({ type, label, icon, color }) => {
-                const active = type === selectedType;
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeTab, active && { borderColor: color, backgroundColor: color + '12' }]}
-                    activeOpacity={0.75}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setSelectedType(type);
-                      setErrorMsg('');
-                      setInputText('');
-                    }}
-                  >
-                    <Feather name={icon} size={13} color={active ? color : Colors.textTertiary} />
-                    <Text style={[styles.typeTabText, active && { color, fontWeight: '700' }]}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
             {/* URL 입력 */}
             <View style={[styles.inputWrapper, errorMsg ? styles.inputWrapperError : undefined]}>
               <Feather name="link-2" size={15} color={Colors.textTertiary} />
@@ -166,7 +139,7 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
                 style={styles.input}
                 value={inputText}
                 onChangeText={t => { setInputText(t); setErrorMsg(''); }}
-                placeholder={current.placeholder}
+                placeholder="뉴스, 유튜브, 트위터(X) URL을 붙여넣으세요."
                 placeholderTextColor={Colors.textTertiary}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -189,21 +162,26 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
               </View>
             )}
 
-            {/* 팁 한 줄 */}
+            {/* 감지된 타입 배지 or 힌트 */}
             <View style={styles.hintRow}>
-              <Feather name="share-2" size={13} color={Colors.textTertiary} />
-              <Text style={styles.hint}>
-                {selectedType === 'news'
-                  ? '기사 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'
-                  : selectedType === 'youtube'
-                  ? '유튜브 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'
-                  : '트위터(X) 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'}
-              </Text>
+              {hasUrl ? (
+                <>
+                  <View style={[styles.detectedBadge, { backgroundColor: meta.color + '18', borderColor: meta.color + '40' }]}>
+                    <Feather name={meta.icon} size={11} color={meta.color} />
+                    <Text style={[styles.detectedText, { color: meta.color }]}>{meta.label} 감지됨</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Feather name="share-2" size={13} color={Colors.textTertiary} />
+                  <Text style={styles.hint}>앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.</Text>
+                </>
+              )}
             </View>
 
             {/* 분석 버튼 */}
             <TouchableOpacity
-              style={[styles.btn, { backgroundColor: current.color }, isAnalyzing && styles.btnDisabled]}
+              style={[styles.btn, { backgroundColor: hasUrl ? meta.color : Colors.primary }, isAnalyzing && styles.btnDisabled]}
               onPress={handleAnalyze}
               activeOpacity={0.85}
               disabled={isAnalyzing}
@@ -256,28 +234,6 @@ const styles = StyleSheet.create({
   titleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 16, fontWeight: '700', color: Colors.text },
 
-  typeTabs: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  typeTab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  typeTabText: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontWeight: '500',
-  },
-
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -310,7 +266,7 @@ const styles = StyleSheet.create({
   },
   hintRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 6,
     marginTop: -4,
   },
@@ -319,6 +275,19 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     lineHeight: 18,
     flex: 1,
+  },
+  detectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  detectedText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   btn: {
