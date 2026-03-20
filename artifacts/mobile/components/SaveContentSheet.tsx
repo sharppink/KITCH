@@ -190,11 +190,16 @@ export function SaveContentSheet({ visible, initialType = 'news', onClose }: Pro
             )}
 
             {/* 팁 한 줄 */}
-            <Text style={styles.hint}>
-              {selectedType === 'news'    ? '기사 URL을 그대로 붙여넣으세요. 대부분의 국내외 언론을 지원해요.' :
-               selectedType === 'youtube' ? 'youtube.com · youtu.be 링크 모두 지원해요. 쇼츠도 됩니다.' :
-                                           'twitter.com · x.com 공개 트윗 링크를 붙여넣으세요.'}
-            </Text>
+            <View style={styles.hintRow}>
+              <Feather name="share-2" size={13} color={Colors.textTertiary} />
+              <Text style={styles.hint}>
+                {selectedType === 'news'
+                  ? '기사 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'
+                  : selectedType === 'youtube'
+                  ? '유튜브 앱에서 공유 → 링크 복사 후 붙여넣거나, URL을 직접 입력하세요.'
+                  : '트위터(X) 앱에서 공유하기 버튼을 누르거나, URL을 직접 붙여넣으세요.'}
+              </Text>
+            </View>
 
             {/* 분석 버튼 */}
             <TouchableOpacity
@@ -303,11 +308,17 @@ const styles = StyleSheet.create({
     color: '#E22C29',
     flex: 1,
   },
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: -4,
+  },
   hint: {
     fontSize: 12,
     color: Colors.textTertiary,
     lineHeight: 18,
-    marginTop: -4,
+    flex: 1,
   },
 
   btn: {
