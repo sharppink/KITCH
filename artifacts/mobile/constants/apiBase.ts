@@ -46,6 +46,27 @@ function isStaleWrongPort8080Override(url: string): boolean {
   );
 }
 
+/**
+ * localhost/127 탭에서 저장된 https 원격 API 주소는 개발 시 혼선만 줌 → 무시하고 제거
+ * (원격 API를 로컬에서 쓰려면 앱 설정에서 다시 저장하거나, 배포된 웹에서 사용)
+ */
+function shouldDropHttpsRemoteOverrideOnLocalhostTab(url: string): boolean {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  const tabHost = window.location.hostname.toLowerCase();
+  if (tabHost !== 'localhost' && tabHost !== '127.0.0.1' && tabHost !== '') {
+    return false;
+  }
+  const raw = url.trim();
+  if (!raw.toLowerCase().startsWith('https://')) return false;
+  try {
+    const u = new URL(raw);
+    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** 앱에 저장되는 원격 API 베이스 (끝은 /api 권장) */
 export const API_BASE_STORAGE_KEY = '@kitch/api_base_url';
 
@@ -164,12 +185,13 @@ export function getStoredApiBaseOverride(): string | null {
  *
  * 우선순위:
  * 1. 앱에 저장된 주소 (원격/ngrok/클라우드) — 와이파이 무관
- * 2. `EXPO_PUBLIC_API_URL` 빌드 타임
- * 3. `EXPO_PUBLIC_DOMAIN` → `https://…/api`
- * 4. 웹: 로컬/사설망일 때만 `http://호스트:8080/api` (같은 PC API, __DEV__·로컬 접속)
+ * 2. 웹 + 로컬/사설망: `http://호스트:8080/api` — `pnpm run vercel-build` 등으로 박힌 EXPO_PUBLIC_API_URL 보다 우선 (로컬 정적 서빙 시 원격만 호출되는 문제 방지)
+ * 3. `EXPO_PUBLIC_API_URL` 빌드 타임
+ * 4. `EXPO_PUBLIC_DOMAIN` → `https://…/api`
  * 5. 웹: 공개 배포 호스트 → DEFAULT_PUBLIC_API_BASE (env 없을 때)
- * 6. 네이티브 프로덕션 빌드 → 항상 DEFAULT_PUBLIC_API_BASE (localhost 미사용)
- * 7. 네이티브 __DEV__ → Expo LAN 또는 localhost:8080
+ * 6. 웹: 그 외 호스트 → DEFAULT_PUBLIC_API_BASE
+ * 7. 네이티브 프로덕션 빌드 → 항상 DEFAULT_PUBLIC_API_BASE (localhost 미사용)
+ * 8. 네이티브 __DEV__ → Expo LAN 또는 localhost:8080
  */
 export function getApiBaseUrl(): string {
   if (overrideFromStorage) {
@@ -185,8 +207,26 @@ export function getApiBaseUrl(): string {
       } else {
         void AsyncStorage.removeItem(API_BASE_STORAGE_KEY);
       }
+    } else if (shouldDropHttpsRemoteOverrideOnLocalhostTab(o)) {
+      overrideFromStorage = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          window.localStorage.removeItem(API_BASE_STORAGE_KEY);
+        } catch {
+          /* noop */
+        }
+      }
     } else {
       return o;
+    }
+  }
+
+  // 웹에서 localhost / 192.168.x.x 등: Vercel용으로 번들에 넣은 원격 API보다 로컬 api-server 우선
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const { hostname } = window.location;
+    if (isPrivateOrLocalHostname(hostname)) {
+      const h = hostname === '127.0.0.1' || hostname === '' ? 'localhost' : hostname;
+      return `http://${h}:${API_PORT}/api`;
     }
   }
 
@@ -203,13 +243,8 @@ export function getApiBaseUrl(): string {
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const { hostname } = window.location;
-    // 공개 PaaS( kitch-web.vercel.app 등 ): 과거 번들·버그로 :8080 이 붙지 않도록 최우선 차단
     if (isPublicDeploymentHostname(hostname)) {
       return DEFAULT_PUBLIC_API_BASE;
-    }
-    if (isPrivateOrLocalHostname(hostname)) {
-      const h = hostname === '127.0.0.1' || hostname === '' ? 'localhost' : hostname;
-      return `http://${h}:${API_PORT}/api`;
     }
     return DEFAULT_PUBLIC_API_BASE;
   }

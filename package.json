@@ -8,6 +8,7 @@
     "push:github": "powershell -ExecutionPolicy Bypass -File ./scripts/git-push.ps1",
     "deploy:vercel": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-vercel-with-github.ps1",
     "vercel-build": "pnpm --filter @workspace/mobile run export:web",
+    "dev:vercel-static": "pnpm run vercel-build && npx --yes serve artifacts/mobile/web-dist -l 3020",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
