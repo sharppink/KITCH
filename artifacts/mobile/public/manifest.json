@@ -1,0 +1,29 @@
+{
+  "id": "/",
+  "short_name": "KITCH",
+  "name": "KITCH — 투자 뉴스 핵심 요약",
+  "description": "뉴스·유튜브·트위터 링크를 저장하면 AI가 핵심만 정리합니다.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "browser"],
+  "orientation": "portrait-primary",
+  "theme_color": "#12146A",
+  "background_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

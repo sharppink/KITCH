@@ -1,0 +1,17 @@
+{
+  "installCommand": "corepack enable && corepack prepare pnpm@10.32.1 --activate && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm run vercel-build",
+  "outputDirectory": "artifacts/mobile/web-dist",
+  "framework": null,
+  "build": {
+    "env": {
+      "EXPO_PUBLIC_API_URL": "https://api-server-sharppinks-projects.vercel.app/api"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!_expo/|favicon.ico|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

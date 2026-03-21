@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "KITCH",
+    "slug": "mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "kitch",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "backgroundColor": "#0F172A",
+      "intentFilters": [
+        {
+          "action": "android.intent.action.SEND",
+          "data": [{ "mimeType": "text/plain" }],
+          "category": ["android.intent.category.DEFAULT"]
+        },
+        {
+          "action": "android.intent.action.VIEW",
+          "data": [
+            { "scheme": "https", "host": "www.youtube.com" },
+            { "scheme": "https", "host": "youtu.be" },
+            { "scheme": "https", "host": "youtube.com" }
+          ],
+          "category": ["android.intent.category.DEFAULT", "android.intent.category.BROWSABLE"]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png",
+      "bundler": "metro",
+      "output": "single",
+      "themeColor": "#12146A",
+      "backgroundColor": "#0F172A"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://kitch-web.vercel.app"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-image-picker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
