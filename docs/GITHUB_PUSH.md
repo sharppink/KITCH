@@ -10,21 +10,38 @@
 
 ## 2. 원격 URL 넣는 방법 (택 1)
 
-### A. 한 번에 인자로
+### A. `package.json`에 고정 (팀·반복 push에 편함)
+
+`package.json`의 `repository.url`을 본인 저장소로 바꿉니다.
+
+```json
+"repository": {
+  "type": "git",
+  "url": "https://github.com/본인계정또는조직/KITCH.git"
+}
+```
+
+그다음:
+
+```powershell
+pnpm push:github
+```
+
+### B. 한 번에 인자로
 
 ```powershell
 cd C:\Users\compro\Downloads\KITCH-master\KITCH-master
 powershell -ExecutionPolicy Bypass -File .\scripts\git-push.ps1 -RepoUrl "https://github.com/조직또는계정/KITCH.git"
 ```
 
-### B. 환경 변수
+### C. 환경 변수
 
 ```powershell
 $env:GITHUB_REPO_URL = "https://github.com/조직또는계정/KITCH.git"
 powershell -ExecutionPolicy Bypass -File .\scripts\git-push.ps1
 ```
 
-### C. `github-repo.url` 파일 (커밋 안 됨)
+### D. `github-repo.url` 파일 (커밋 안 됨)
 
 1. `github-repo.url.example` 을 복사해 **`github-repo.url`** 로 저장 (프로젝트 루트)  
 2. 내용을 본인 저장소 HTTPS URL **한 줄**로 수정  

@@ -4,12 +4,17 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "node scripts/preinstall.cjs",
+    "push:github": "powershell -ExecutionPolicy Bypass -File ./scripts/git-push.ps1",
     "vercel-build": "pnpm --filter @workspace/mobile run export:web",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_ORG_OR_USER/KITCH.git"
+  },
   "engines": {
     "node": ">=20"
   },

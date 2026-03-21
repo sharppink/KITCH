@@ -1,9 +1,10 @@
-# GitHub로 main 브랜치 push (원격 URL은 아래 중 하나로 지정)
-#   - 환경 변수: $env:GITHUB_REPO_URL
-#   - 프로젝트 루트 파일: github-repo.url (한 줄, .gitignore 됨)
-#   - 매개변수: -RepoUrl
+# GitHub로 main 브랜치 push (원격 URL 우선순위)
+#   1) 매개변수 -RepoUrl
+#   2) 환경 변수 GITHUB_REPO_URL
+#   3) 프로젝트 루트 github-repo.url (한 줄, .gitignore)
+#   4) package.json 의 repository.url (본인 GitHub 주소로 수정 후 커밋)
 #
-# Private 저장소: Git Credential Manager 또는 PAT 필요
+# Private 저장소: Git Credential Manager 권장
 #   git config --global credential.helper manager
 param(
   [string]$RepoUrl = $env:GITHUB_REPO_URL
@@ -13,12 +14,37 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root
 
+function Get-RepoUrlFromPackageJson {
+  $pkgPath = Join-Path $root "package.json"
+  try {
+    $pkg = Get-Content $pkgPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $url = $null
+    if ($null -ne $pkg.repository) {
+      if ($pkg.repository -is [string]) {
+        $url = $pkg.repository
+      } elseif ($pkg.repository.PSObject.Properties["url"]) {
+        $url = [string]$pkg.repository.url
+      }
+    }
+    if ([string]::IsNullOrWhiteSpace($url)) { return $null }
+    $url = $url.Trim()
+    if ($url -match 'YOUR_ORG_OR_USER|YOUR_USERNAME|PLACEHOLDER') { return $null }
+    return $url
+  } catch {
+    return $null
+  }
+}
+
 $urlFile = Join-Path $root "github-repo.url"
 if (-not $RepoUrl -and (Test-Path $urlFile)) {
   $RepoUrl = (Get-Content $urlFile -Raw).Trim()
   if ($RepoUrl -match '^#|^\s*$') {
     $RepoUrl = $null
   }
+}
+
+if (-not $RepoUrl) {
+  $RepoUrl = Get-RepoUrlFromPackageJson
 }
 
 if (-not $RepoUrl) {
@@ -32,10 +58,13 @@ if (-not $RepoUrl) {
   Write-Host ""
   Write-Host '  (3) 인자: .\scripts\git-push.ps1 -RepoUrl "https://github.com/계정/KITCH.git"'
   Write-Host ""
+  Write-Host "  (4) package.json 의 repository.url 을 본인 저장소로 수정한 뒤:"
+  Write-Host "      pnpm push:github"
+  Write-Host ""
   exit 1
 }
 
-if ($RepoUrl -match 'YOUR_|PLACEHOLDER|example\.com') {
+if ($RepoUrl -match 'YOUR_ORG_OR_USER|YOUR_|PLACEHOLDER|example\.com') {
   Write-Host "[오류] URL을 실제 GitHub 저장소 주소로 바꿔 주세요." -ForegroundColor Red
   exit 1
 }
