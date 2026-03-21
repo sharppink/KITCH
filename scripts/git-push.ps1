@@ -71,8 +71,14 @@ if ($RepoUrl -match 'YOUR_ORG_OR_USER|YOUR_|PLACEHOLDER|example\.com') {
 
 $RepoUrl = $RepoUrl.Trim()
 
+# origin 없을 때 git 가 stderr 를 쓰면 $ErrorActionPreference Stop 과 충돌하므로 잠시 완화
+$prevEa = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
 $existing = git remote get-url origin 2>$null
-if ($LASTEXITCODE -eq 0) {
+$hasOrigin = $LASTEXITCODE -eq 0
+$ErrorActionPreference = $prevEa
+
+if ($hasOrigin) {
   if ($existing -ne $RepoUrl) {
     Write-Host "origin 변경: $existing -> $RepoUrl"
     git remote set-url origin $RepoUrl
@@ -87,5 +93,10 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host ""
 Write-Host "git push -u origin main 실행 중..."
 git push -u origin main
+if ($LASTEXITCODE -ne 0) {
+  Write-Host ""
+  Write-Host "[오류] git push 실패 (exit $LASTEXITCODE). 저장소 URL·Private 권한·로그인(PAT)을 확인하세요." -ForegroundColor Red
+  exit 1
+}
 Write-Host ""
 Write-Host "완료." -ForegroundColor Green
