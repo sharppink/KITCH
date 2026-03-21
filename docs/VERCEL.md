@@ -22,6 +22,7 @@ Vercel은 Git 저장소를 연결하는 방식이 가장 단순합니다.
 |------|------|
 | `EXPO_PUBLIC_API_URL` | API 베이스 전체 URL (끝 `/api` 권장). 예: `https://api-server-xxx.vercel.app/api`. 루트 `vercel.json`의 `build.env`에 기본값이 들어 있을 수 있습니다. |
 | `EXPO_PUBLIC_DOMAIN` | **API가 제공되는 호스트만** (프로토콜 없음). 예: `api.example.com` → 앱은 `https://api.example.com/api` 로 요청합니다. (`EXPO_PUBLIC_API_URL`이 없을 때만 사용) |
+| `EXPO_PUBLIC_USE_REMOTE_API` | `1` 또는 `true` 이면 **로컬 웹**(`localhost`)에서도 `http://localhost:8080/api` 대신 Vercel 등 **원격 API**만 사용합니다. `artifacts/mobile/.env`에 두면 `expo start --web` 시 적용됩니다. |
 
 로컬 개발처럼 API가 없으면 분석·시세 등이 동작하지 않습니다. API는 **Railway, Render, Fly.io** 등에 `artifacts/api-server`를 배포한 뒤, 그 도메인을 `EXPO_PUBLIC_DOMAIN`에 넣으면 됩니다.
 

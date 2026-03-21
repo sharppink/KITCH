@@ -4,6 +4,11 @@ import { Platform } from 'react-native';
 
 const API_PORT = 8080;
 
+/** `EXPO_PUBLIC_USE_REMOTE_API=1` 이면 로컬 웹에서도 `localhost:8080` 대신 Vercel 등 원격 API만 사용 */
+const USE_REMOTE_API =
+  process.env.EXPO_PUBLIC_USE_REMOTE_API === '1' ||
+  process.env.EXPO_PUBLIC_USE_REMOTE_API === 'true';
+
 /**
  * Vercel 등 공개 배포 시 기본 API (로컬호스트 미사용).
  * 포크·자체 API는 빌드 시 EXPO_PUBLIC_API_URL 로 덮어쓰기.
@@ -47,8 +52,25 @@ function isStaleWrongPort8080Override(url: string): boolean {
 }
 
 /**
+ * HTTPS로 열린 사이트(kitch-web.vercel.app 등)에서 `http://localhost`/`127.0.0.1` API는
+ * 브라우저 혼합 콘텐츠 정책으로 fetch 자체가 막힘. 로컬 개발(HTTP 탭)에서만 유효한 override.
+ */
+function isHttpLoopbackOverrideOnHttpsPage(url: string): boolean {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  if (window.location.protocol !== 'https:') return false;
+  const raw = url.trim();
+  if (!raw.toLowerCase().startsWith('http://')) return false;
+  try {
+    const u = new URL(raw);
+    return u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * localhost/127 탭에서 저장된 https 원격 API 주소는 개발 시 혼선만 줌 → 무시하고 제거
- * (원격 API를 로컬에서 쓰려면 앱 설정에서 다시 저장하거나, 배포된 웹에서 사용)
+ * (`EXPO_PUBLIC_USE_REMOTE_API=1` 이면 제거하지 않음)
  */
 function shouldDropHttpsRemoteOverrideOnLocalhostTab(url: string): boolean {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
@@ -101,6 +123,23 @@ function discardStaleOverrideIfNeeded(): void {
 }
 
 discardStaleOverrideIfNeeded();
+
+/** bootstrap 직후: HTTPS 프로덕션에서 localhost http override 제거 (동기) */
+function discardHttpsLoopbackOverrideIfNeeded(): void {
+  if (!overrideFromStorage || !isHttpLoopbackOverrideOnHttpsPage(overrideFromStorage)) {
+    return;
+  }
+  overrideFromStorage = null;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(API_BASE_STORAGE_KEY);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+discardHttpsLoopbackOverrideIfNeeded();
 
 /**
  * 네이티브에서 AsyncStorage를 읽은 뒤에만 호출됨. 웹은 bootstrap에서 이미 반영.
@@ -185,7 +224,7 @@ export function getStoredApiBaseOverride(): string | null {
  *
  * 우선순위:
  * 1. 앱에 저장된 주소 (원격/ngrok/클라우드) — 와이파이 무관
- * 2. 웹 + 로컬/사설망: `http://호스트:8080/api` — `pnpm run vercel-build` 등으로 박힌 EXPO_PUBLIC_API_URL 보다 우선 (로컬 정적 서빙 시 원격만 호출되는 문제 방지)
+ * 2. 웹 + 로컬/사설망 + `EXPO_PUBLIC_USE_REMOTE_API` 아님: `http://호스트:8080/api` (로컬 api-server)
  * 3. `EXPO_PUBLIC_API_URL` 빌드 타임
  * 4. `EXPO_PUBLIC_DOMAIN` → `https://…/api`
  * 5. 웹: 공개 배포 호스트 → DEFAULT_PUBLIC_API_BASE (env 없을 때)
@@ -196,7 +235,16 @@ export function getStoredApiBaseOverride(): string | null {
 export function getApiBaseUrl(): string {
   if (overrideFromStorage) {
     const o = overrideFromStorage.replace(/\/$/, '');
-    if (isStaleWrongPort8080Override(o)) {
+    if (isHttpLoopbackOverrideOnHttpsPage(o)) {
+      overrideFromStorage = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          window.localStorage.removeItem(API_BASE_STORAGE_KEY);
+        } catch {
+          /* noop */
+        }
+      }
+    } else if (isStaleWrongPort8080Override(o)) {
       overrideFromStorage = null;
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         try {
@@ -207,7 +255,7 @@ export function getApiBaseUrl(): string {
       } else {
         void AsyncStorage.removeItem(API_BASE_STORAGE_KEY);
       }
-    } else if (shouldDropHttpsRemoteOverrideOnLocalhostTab(o)) {
+    } else if (shouldDropHttpsRemoteOverrideOnLocalhostTab(o) && !USE_REMOTE_API) {
       overrideFromStorage = null;
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         try {
@@ -221,10 +269,10 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // 웹에서 localhost / 192.168.x.x 등: Vercel용으로 번들에 넣은 원격 API보다 로컬 api-server 우선
+  // 웹에서 localhost / 192.168.x.x 등: 기본은 로컬 api-server:8080 (USE_REMOTE_API 이면 건너뜀)
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const { hostname } = window.location;
-    if (isPrivateOrLocalHostname(hostname)) {
+    if (isPrivateOrLocalHostname(hostname) && !USE_REMOTE_API) {
       const h = hostname === '127.0.0.1' || hostname === '' ? 'localhost' : hostname;
       return `http://${h}:${API_PORT}/api`;
     }

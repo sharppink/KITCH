@@ -25,9 +25,9 @@ Vercel 대시보드에서 해당 프로젝트의 **Root Directory**가 `artifact
 
 **주의:** 루트에 `kitch-web`용 `.vercel`이 있으면 `vercel deploy ../..`만 쓰면 **웹 프로젝트**로 배포될 수 있으니, 위처럼 `VERCEL_PROJECT_ID`로 api-server를 지정하는 편이 안전합니다.
 
-### `public` 폴더 (Vercel Output Directory)
+### `public` 폴더
 
-대시보드에서 **Output Directory**가 `public`인 경우가 많습니다. 이 패키지는 정적 사이트가 아니라 **서버리스 `/api`** 이므로, 빌드가 `public`을 채우지 않으면 Vercel이 **「The Output Directory 'public' is empty」** 로 실패할 수 있습니다. 그래서 루트 안내용 **`public/index.html`** 을 저장소에 포함해 두었습니다. (삭제하지 마세요.)
+루트 안내용 **`public/index.html`** 은 저장소에 포함해 두었습니다. **Output Directory**는 `vercel.json`에 두지 않습니다. (과거 `outputDirectory: "public"` + `api/[...path].js` 조합에서 **프로덕션에 `/api/market/...` 등이 Vercel NOT_FOUND** 로 떨어지는 문제가 있었습니다.) 대시보드에 **Output Directory**가 `public`으로 남아 있으면 비우거나, 빌드 산출물과 맞지 않으면 제거하세요.
 
 ### Express on Vercel
 
@@ -51,6 +51,6 @@ Vercel 대시보드에서 해당 프로젝트의 **Root Directory**가 `artifact
 
 Git 연동 시 **Root Directory**가 저장소 루트(`.`)로만 잡혀 있으면 루트 `vercel.json`의 `vercel-build`(Expo 웹)가 실행되어 **API가 아니라 프론트 정적 파일**이 배포됩니다. **api-server** 프로젝트는 대시보드 또는 API에서 **`artifacts/api-server`** 로 두어야 합니다.
 
-### `api/index.js` vs `api/[...path].js`
+### `api/index.js` + `rewrites`
 
-Vercel은 `api/index.js`를 **경로 `/api` 한 구간**에만 연결합니다. 클라이언트가 `GET /api/healthz` 를 쓰려면 **`api/[...path].js`**(catch-all)로 Express 앱을 한 번만 내보내야 합니다.
+**`api/index.js`** 에서 Express 앱을 `export default` 하고, **`vercel.json`의 `rewrites`** 로 `source: "/api/(.*)"` → `destination: "/api"` 를 두면 **`/api/market/kospi` 등 모든 하위 경로**가 같은 핸들러로 들어갑니다.
