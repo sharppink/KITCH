@@ -61,6 +61,15 @@ if (-not $npx) {
   Fail "npx 를 찾을 수 없습니다. Node.js 를 설치했는지 확인하세요."
 }
 
+# 루트 .vercel/project.json 기준으로 배포 (환경에 남은 VERCEL_PROJECT_ID 가 api-server 등으로 잡히는 것 방지)
+$vercelProjectJson = Join-Path $root ".vercel/project.json"
+if (Test-Path $vercelProjectJson) {
+  $vp = Get-Content $vercelProjectJson -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($vp.orgId) { $env:VERCEL_ORG_ID = [string]$vp.orgId }
+  if ($vp.projectId) { $env:VERCEL_PROJECT_ID = [string]$vp.projectId }
+  Write-Host "Vercel 프로젝트: $($vp.projectName) ($($vp.projectId))" -ForegroundColor DarkGray
+}
+
 npx vercel deploy --prod --yes
 if ($LASTEXITCODE -ne 0) {
   Fail "Vercel 배포 실패 (exit $($LASTEXITCODE)). 위쪽 npm/Vercel 로그를 확인하세요."
