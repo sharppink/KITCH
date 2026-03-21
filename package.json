@@ -5,6 +5,7 @@
   "scripts": {
     "preinstall": "node scripts/preinstall.cjs",
     "push:github": "powershell -ExecutionPolicy Bypass -File ./scripts/git-push.ps1",
+    "deploy:vercel": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-vercel-with-github.ps1",
     "vercel-build": "pnpm --filter @workspace/mobile run export:web",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",

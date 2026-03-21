@@ -54,6 +54,24 @@ npx vercel
 
 프로젝트는 대시보드에서 이름을 지정하면 됩니다. 저장소 루트의 `vercel.json`에 예전 방식의 `name` 필드는 넣지 않습니다(deprecated).
 
+### 5.1 GitHub push 성공 후에만 Vercel CLI 실행
+
+`pnpm deploy:vercel` 은 다음 순서로 동작합니다.
+
+1. **미커밋 변경이 있으면 중단**하고, 먼저 커밋하거나 `-AutoCommit` 사용을 안내합니다.  
+2. **`pnpm push:github`** 와 동일하게 GitHub에 push합니다. **실패하면 여기서 종료**하고 이유를 출력합니다.  
+3. push가 성공한 경우에만 **`npx vercel deploy --prod --yes`** 를 실행합니다.
+
+```powershell
+pnpm deploy:vercel
+```
+
+미커밋 변경을 자동으로 커밋까지 하려면:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-vercel-with-github.ps1 -AutoCommit
+```
+
 ## 6. PWA (홈 화면에 앱처럼 설치)
 
 웹 빌드에는 다음이 포함됩니다.
