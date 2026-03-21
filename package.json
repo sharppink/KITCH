@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "node scripts/preinstall.cjs",
+    "git:account": "powershell -ExecutionPolicy Bypass -File ./scripts/git-account-setup.ps1",
     "push:github": "powershell -ExecutionPolicy Bypass -File ./scripts/git-push.ps1",
     "deploy:vercel": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-vercel-with-github.ps1",
     "vercel-build": "pnpm --filter @workspace/mobile run export:web",
@@ -14,7 +15,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_ORG_OR_USER/KITCH.git"
+    "url": "https://github.com/sharppink/KITCH.git"
   },
   "engines": {
     "node": ">=20"
