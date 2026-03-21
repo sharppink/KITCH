@@ -55,3 +55,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# 로컬만 쓰는 GitHub 원격 URL (git-push.ps1이 읽음)
+github-repo.url
