@@ -25,6 +25,10 @@ Vercel 대시보드에서 해당 프로젝트의 **Root Directory**가 `artifact
 
 **주의:** 루트에 `kitch-web`용 `.vercel`이 있으면 `vercel deploy ../..`만 쓰면 **웹 프로젝트**로 배포될 수 있으니, 위처럼 `VERCEL_PROJECT_ID`로 api-server를 지정하는 편이 안전합니다.
 
+### `public` 폴더 (Vercel Output Directory)
+
+대시보드에서 **Output Directory**가 `public`인 경우가 많습니다. 이 패키지는 정적 사이트가 아니라 **서버리스 `/api`** 이므로, 빌드가 `public`을 채우지 않으면 Vercel이 **「The Output Directory 'public' is empty」** 로 실패할 수 있습니다. 그래서 루트 안내용 **`public/index.html`** 을 저장소에 포함해 두었습니다. (삭제하지 마세요.)
+
 ### Express on Vercel
 
 `api/index.ts`에서 Express `app`을 export 하므로 서버리스 함수로 동작합니다. 로컬에서는 `pnpm dev`(또는 `src/index.ts`)로 포트 리슨합니다.
