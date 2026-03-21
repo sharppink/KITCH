@@ -89,3 +89,7 @@ iOS Safari: **공유 → 홈 화면에 추가**.
 
 - 루트 `pnpm-workspace.yaml`의 `minimumReleaseAge` 때문에 **최근에 올라온 패키지**가 있으면 설치가 실패할 수 있습니다. 그때는 잠시 후 재시도하거나 정책을 조정하세요.
 - **`.env`는 Git에 넣지 마세요.** Vercel **Environment Variables**에만 등록합니다.
+
+## 8. API가 웹에서 안 붙을 때 (Failed to fetch / 서버에 연결할 수 없습니다)
+
+`EXPO_PUBLIC_API_URL`이 가리키는 **api-server** Vercel 프로젝트에 **Deployment Protection**이 프로덕션까지 적용되면, 브라우저 `fetch`는 CORS 때문에 `Failed to fetch`로 실패합니다. **api-server** 프로젝트 → **Settings** → **Deployment Protection**에서 프로덕션 공개 여부를 확인하세요. 자세한 설명은 [artifacts/api-server/README.md](../artifacts/api-server/README.md) 의 해당 절을 참고하세요.

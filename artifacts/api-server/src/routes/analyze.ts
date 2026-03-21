@@ -24,10 +24,22 @@ function extractJSON(raw: string): Record<string, any> {
   }
 }
 
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
+let openaiSingleton: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openaiSingleton) {
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY?.trim();
+    if (!apiKey) {
+      throw new Error(
+        "AI_INTEGRATIONS_OPENAI_API_KEY is not set. Configure it in Vercel Environment Variables.",
+      );
+    }
+    openaiSingleton = new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey,
+    });
+  }
+  return openaiSingleton;
+}
 
 const SYSTEM_PROMPT = `당신은 투자 분석 AI입니다. 주어진 콘텐츠를 분석하여 다음 JSON 형식으로 정확히 응답하세요:
 {
@@ -143,7 +155,7 @@ async function runCredibilityRounds(
   rounds = 4
 ): Promise<Array<{ credibilityScore: number; criteriaScores: number[] }>> {
   const calls = Array.from({ length: rounds }, () =>
-    openai.chat.completions.create({
+    getOpenAI().chat.completions.create({
       model: "gpt-5.2",
       max_completion_tokens: 512,
       temperature: 0.5,
@@ -373,7 +385,7 @@ router.post("/news", async (req, res) => {
 
     const newsUserContent = `다음 뉴스 기사를 투자 관점에서 분석해주세요.\n\n제목: ${title}\nURL: ${url}\n\n내용:\n${cleanText}`;
     const [completion, extraCredibility] = await Promise.all([
-      openai.chat.completions.create({
+      getOpenAI().chat.completions.create({
         model: "gpt-5.2",
         max_completion_tokens: 8192,
         temperature: 0.5,
@@ -571,7 +583,7 @@ router.post("/youtube", async (req, res) => {
 
     const ytUserContent = `다음 유튜브 투자 영상을 분석해주세요.\n\n제목: ${displayTitle}\n채널: ${channelName || "알 수 없음"}\nURL: ${url}\n\n${contentForAnalysis}`;
     const [completion, extraCredibility] = await Promise.all([
-      openai.chat.completions.create({
+      getOpenAI().chat.completions.create({
         model: "gpt-5.2",
         max_completion_tokens: 8192,
         temperature: 0.5,
@@ -645,7 +657,7 @@ router.post("/twitter", async (req, res) => {
 
     const twitterUserContent = `다음 트위터(X) 게시물을 투자 관점에서 분석해주세요.\n\n작성자: ${authorName}\nURL: ${url}\n\n트윗 내용:\n${tweetText}`;
     const [completion, extraCredibility] = await Promise.all([
-      openai.chat.completions.create({
+      getOpenAI().chat.completions.create({
         model: "gpt-5.2",
         max_completion_tokens: 8192,
         temperature: 0.5,
@@ -694,7 +706,7 @@ router.post("/screenshot", async (req, res) => {
       { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: "low" } },
     ];
     const [completion, extraCredibility] = await Promise.all([
-      openai.chat.completions.create({
+      getOpenAI().chat.completions.create({
         model: "gpt-5.2",
         max_completion_tokens: 8192,
         temperature: 0.5,

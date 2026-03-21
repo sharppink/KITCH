@@ -54,24 +54,33 @@ async function buildAll() {
       !(pkg.dependencies?.[dep]?.startsWith("workspace:")),
   );
 
-  await esbuild({
-    entryPoints: [path.resolve(__dirname, "src/index.ts")],
-    platform: "node",
+  const shared = {
+    platform: "node" as const,
     bundle: true,
-    format: "cjs",
-    outfile: path.resolve(distDir, "index.cjs"),
+    format: "cjs" as const,
     define: {
       "process.env.NODE_ENV": '"production"',
-      // Replace import.meta.url with a CJS-safe equivalent so createRequire works.
       "import.meta.url": "__importMetaUrl",
     },
-    // Define __importMetaUrl at the top of the CJS bundle before any module code runs.
     banner: {
       js: `const __importMetaUrl = require("url").pathToFileURL(__filename).href;`,
     },
     minify: true,
     external: externals,
-    logLevel: "info",
+    logLevel: "info" as const,
+  };
+
+  await esbuild({
+    ...shared,
+    entryPoints: [path.resolve(__dirname, "src/index.ts")],
+    outfile: path.resolve(distDir, "index.cjs"),
+  });
+
+  // Vercel serverless(api/index.js): listen 없이 Express 앱만 export
+  await esbuild({
+    ...shared,
+    entryPoints: [path.resolve(__dirname, "src/app.ts")],
+    outfile: path.resolve(distDir, "serverless.cjs"),
   });
 }
 
