@@ -46,6 +46,10 @@ export function HistoryCard({ item, onPress, onDelete, onFolderPress, currentFol
   const sentimentColor = getSentimentColor(result.sentiment);
   const credColor      = getCredibilityColor(result.credibilityScore);
 
+  const criteriaScores: number[] = Array.isArray(result.criteriaScores) && result.criteriaScores.length === 6
+    ? result.criteriaScores : [];
+  const isUnreliable = criteriaScores.length === 6 && criteriaScores.filter(s => s < 40).length >= 4;
+
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onDelete();
@@ -77,10 +81,17 @@ export function HistoryCard({ item, onPress, onDelete, onFolderPress, currentFol
         )}
 
         <View style={styles.footer}>
-          <View style={styles.scoreRow}>
-            <Text style={[styles.score, { color: credColor }]}>{result.credibilityScore ?? '-'}</Text>
-            <Text style={styles.scoreLabel}> 신뢰도</Text>
-          </View>
+          {isUnreliable ? (
+            <View style={styles.scoreRow}>
+              <Feather name="alert-triangle" size={13} color="#E22C29" />
+              <Text style={styles.warningLabel}> 신뢰성 주의</Text>
+            </View>
+          ) : (
+            <View style={styles.scoreRow}>
+              <Text style={[styles.score, { color: credColor }]}>{result.credibilityScore ?? '-'}</Text>
+              <Text style={styles.scoreLabel}> 신뢰도</Text>
+            </View>
+          )}
           <View style={styles.stocks}>
             {(result.recommendedStocks ?? []).slice(0, 2).map((s) => (
               <StockTagCompact key={s.ticker} stock={s} />
@@ -133,9 +144,10 @@ const styles = StyleSheet.create({
   },
   memoPreviewText: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.primary, flex: 1 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  scoreRow: { flexDirection: 'row', alignItems: 'baseline' },
+  scoreRow: { flexDirection: 'row', alignItems: 'center' },
   score: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   scoreLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
+  warningLabel: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#E22C29' },
   stocks: { flex: 1, flexDirection: 'row', gap: 4, flexWrap: 'nowrap' },
 
   /* 폴더 버튼 */
