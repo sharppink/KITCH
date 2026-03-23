@@ -6,7 +6,7 @@
  */
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,6 +23,8 @@ declare global {
   interface Window {
     /** public/index.html 인라인 스크립트가 번들보다 먼저 캡처한 이벤트 */
     __kitchDeferredInstallPrompt?: BeforeInstallPromptEventLike | null;
+    /** app/index 온보딩이 열려 있으면 true — 설치 배너 숨김 */
+    __kitchPwaBlockOnboarding?: boolean;
   }
 }
 
@@ -53,6 +55,8 @@ export function PwaInstallBanner() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEventLike | null>(null);
   /** native: 브라우저 설치 API 사용 / manual: /install 안내 */
   const [installMode, setInstallMode] = useState<InstallMode>(null);
+  /** index 화면 온보딩(환영)이 열려 있을 때 — 겹침 방지로 설치 배너 숨김 */
+  const [blockedByOnboarding, setBlockedByOnboarding] = useState(false);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearFallbackTimer = useCallback(() => {
@@ -60,6 +64,16 @@ export function PwaInstallBanner() {
       clearTimeout(fallbackTimerRef.current);
       fallbackTimerRef.current = null;
     }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const sync = () => {
+      setBlockedByOnboarding(!!window.__kitchPwaBlockOnboarding);
+    };
+    sync();
+    window.addEventListener('kitch:pwa-onboarding-sync', sync);
+    return () => window.removeEventListener('kitch:pwa-onboarding-sync', sync);
   }, []);
 
   useEffect(() => {
@@ -196,7 +210,7 @@ export function PwaInstallBanner() {
     setInstallMode(null);
   }, [deferred, installMode]);
 
-  if (Platform.OS !== 'web' || installMode === null) {
+  if (Platform.OS !== 'web' || installMode === null || blockedByOnboarding) {
     return null;
   }
 
@@ -253,7 +267,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 99999,
+    /** 온보딩(zIndex 100) 등 위에 확실히 올림 */
+    zIndex: 999999,
     paddingHorizontal: 14,
     pointerEvents: 'box-none',
   },

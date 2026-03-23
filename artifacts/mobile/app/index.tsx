@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { KiwoomBottomBar } from '@/components/KiwoomBottomBar';
 import {
   Animated,
@@ -94,6 +94,18 @@ export default function Home() {
 
   const showOnboarding = history.length === 0 && !onboardingDismissed;
   const isSearching    = searchQuery.trim().length > 0;
+
+  /** 웹: 환영(온보딩)이 떠 있는 동안 PWA 설치 배너를 숨김 — useLayoutEffect로 첫 페인트 전에 동기화 */
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const w = window as Window & { __kitchPwaBlockOnboarding?: boolean };
+    w.__kitchPwaBlockOnboarding = showOnboarding;
+    window.dispatchEvent(new CustomEvent('kitch:pwa-onboarding-sync'));
+    return () => {
+      w.__kitchPwaBlockOnboarding = false;
+      window.dispatchEvent(new CustomEvent('kitch:pwa-onboarding-sync'));
+    };
+  }, [showOnboarding]);
 
   useEffect(() => {
     if (showOnboarding) {
