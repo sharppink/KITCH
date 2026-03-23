@@ -95,6 +95,7 @@ export function PwaInstallBanner() {
     setVisible(false);
   }, [deferred]);
 
+  /** 브라우저 탭으로 열린 경우에만(standalone 아님). 설치 프롬프트를 받은 뒤에만 표시 — iOS Safari 등은 이벤트 없음 */
   if (Platform.OS !== 'web' || !visible || !deferred) {
     return null;
   }
@@ -103,7 +104,7 @@ export function PwaInstallBanner() {
 
   return (
     <View
-      style={[styles.wrap, { paddingBottom: bottomPad }]}
+      style={[styles.wrap, styles.wrapWeb, { paddingBottom: bottomPad }]}
       pointerEvents="box-none"
     >
       <View style={styles.card}>
@@ -114,7 +115,7 @@ export function PwaInstallBanner() {
           <View style={styles.textCol}>
             <Text style={styles.title}>앱으로 설치하기</Text>
             <Text style={styles.desc}>
-              설치하면 브라우저 탭 없이 KITCH를 앱처럼 바로 열 수 있어요.
+              홈 화면에 KITCH를 추가해서 앱처럼 바로 열 수 있어요.
             </Text>
           </View>
         </View>
@@ -141,9 +142,10 @@ export function PwaInstallBanner() {
   );
 }
 
-const NAVY = '#12146A';
-const NAVY_LIGHT = 'rgba(255,255,255,0.14)';
-const BTN_DARK = '#1E2B7A';
+/** 디자인 시안: 짙은 네이비 배경, 하단 고정 카드 */
+const NAVY = '#1A1C4E';
+const NAVY_LIGHT = 'rgba(255,255,255,0.12)';
+const BTN_DARK = 'rgba(255,255,255,0.16)';
 
 const styles = StyleSheet.create({
   wrap: {
@@ -155,6 +157,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     pointerEvents: 'box-none',
   },
+  /** 웹: 스크롤·레이아웃과 무관하게 화면 맨 아래에 고정 */
+  wrapWeb:
+    Platform.OS === 'web'
+      ? {
+          position: 'fixed' as const,
+          width: '100%' as const,
+          maxWidth: '100%' as const,
+        }
+      : {},
   card: {
     backgroundColor: NAVY,
     borderRadius: 20,
@@ -226,7 +237,7 @@ const styles = StyleSheet.create({
   btnPrimaryText: {
     fontFamily: 'Inter_700Bold',
     fontSize: 14,
-    color: NAVY,
+    color: '#1A1C4E',
   },
   pressed: {
     opacity: 0.85,
