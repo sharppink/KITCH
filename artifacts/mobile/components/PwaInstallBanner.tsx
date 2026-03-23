@@ -17,6 +17,13 @@ type BeforeInstallPromptEventLike = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
+declare global {
+  interface Window {
+    /** public/index.html 인라인 스크립트가 번들보다 먼저 캡처한 이벤트 */
+    __kitchDeferredInstallPrompt?: BeforeInstallPromptEventLike | null;
+  }
+}
+
 function isStandalonePwa(): boolean {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
   return (
@@ -49,9 +56,25 @@ export function PwaInstallBanner() {
       return;
     }
 
+    const applyCaptured = (e: BeforeInstallPromptEventLike | null | undefined) => {
+      if (e && typeof e.prompt === 'function') {
+        setDeferred(e);
+        setVisible(true);
+      }
+    };
+
+    /** 인라인 스크립트가 이미 저장해 둔 경우(프로덕션 번들 로드 전에 이벤트가 발생한 경우) */
+    applyCaptured(window.__kitchDeferredInstallPrompt ?? null);
+
+    const onEarlyCapture = () => {
+      applyCaptured(window.__kitchDeferredInstallPrompt ?? null);
+    };
+
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEventLike);
+      const ev = e as BeforeInstallPromptEventLike;
+      window.__kitchDeferredInstallPrompt = ev;
+      setDeferred(ev);
       setVisible(true);
     };
 
@@ -61,13 +84,16 @@ export function PwaInstallBanner() {
       } catch {
         /* ignore */
       }
+      window.__kitchDeferredInstallPrompt = null;
       setVisible(false);
       setDeferred(null);
     };
 
+    window.addEventListener('kitch:pwa-install-prompt', onEarlyCapture);
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
+      window.removeEventListener('kitch:pwa-install-prompt', onEarlyCapture);
       window.removeEventListener('beforeinstallprompt', onBeforeInstall);
       window.removeEventListener('appinstalled', onInstalled);
     };
@@ -78,6 +104,9 @@ export function PwaInstallBanner() {
       sessionStorage.setItem(STORAGE_DISMISS, '1');
     } catch {
       /* ignore */
+    }
+    if (typeof window !== 'undefined') {
+      window.__kitchDeferredInstallPrompt = null;
     }
     setVisible(false);
     setDeferred(null);
@@ -90,6 +119,9 @@ export function PwaInstallBanner() {
       await deferred.userChoice;
     } catch {
       /* 사용자 취소 등 */
+    }
+    if (typeof window !== 'undefined') {
+      window.__kitchDeferredInstallPrompt = null;
     }
     setDeferred(null);
     setVisible(false);

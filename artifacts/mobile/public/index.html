@@ -11,6 +11,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/logo192.png" />
+    <!--
+      beforeinstallprompt는 페이지 로드 초기에 한 번만 오는데, React 번들(useEffect)보다 먼저 발생하면
+      이벤트를 놓친다(로컬 dev는 느려서 우연히 잡히는 경우가 많음). 인라인으로 즉시 캡처 → window에 보관.
+    -->
+    <script>
+      (function () {
+        try {
+          window.__kitchDeferredInstallPrompt = null;
+          window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__kitchDeferredInstallPrompt = e;
+            window.dispatchEvent(new CustomEvent('kitch:pwa-install-prompt'));
+          });
+        } catch (_) {}
+      })();
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
