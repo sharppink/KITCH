@@ -84,7 +84,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\deploy-vercel-with-github.ps1
 Chrome/Edge: 주소창의 **설치** 아이콘 또는 메뉴에서 “앱 설치”.  
 iOS Safari: **공유 → 홈 화면에 추가**.
 
+사용자에게 설치 방법을 안내하려면 배포 URL의 **`/install`** 페이지(예: `https://당신도메인/install`)를 공유하면 됩니다.
+
 오프라인 캐시를 강화하려면 [Expo PWA 가이드](https://docs.expo.dev/guides/progressive-web-apps/)의 Workbox 절차를 `export:web` 이후 단계에 붙이면 됩니다.
+
+## 6.1 커스텀 도메인으로 PWA 배포
+
+1. **Vercel** → 웹 프로젝트 → **Settings** → **Domains** 에서 구입한 도메인을 추가하고, 안내에 따라 DNS(A/CNAME)를 연결합니다.
+2. **Environment Variables**(Production)에 다음을 설정합니다.  
+   - **`EXPO_PUBLIC_SITE_URL`** = `https://당신도메인` (끝 `/` 없음, `https` 권장)  
+   루트 `vercel.json`의 `build.env`에 기본값이 있어도, **대시보드 값이 우선**합니다.
+3. 환경 변수를 바꾼 뒤에는 **재배포**(Redeploy)해야 번들에 반영됩니다.
+4. `expo-router`의 메타데이터용 `origin`이 이 URL과 맞춰지며, 같은 주소로 접속한 사용자는 **manifest / 서비스 워커**가 그 도메인 기준으로 동작합니다(API는 여전히 `EXPO_PUBLIC_API_URL`).
 
 ## 7. 주의
 

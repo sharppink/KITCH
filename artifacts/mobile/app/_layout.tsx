@@ -61,11 +61,12 @@ export default function RootLayout() {
     void initApiBase().then(() => setApiBaseReady(true));
   }, []);
 
-  // 웹에서 딥링크로 진입 시 첫 화면으로 리셋 (이미 / 이면 스킵)
+  // 웹에서 딥링크로 진입 시 첫 화면으로 리셋 — PWA 설치 안내 `/install` 은 유지
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      if (path !== '/' && path !== '') {
+      const normalized = window.location.pathname.replace(/\/$/, '') || '/';
+      const allowed = normalized === '/' || normalized === '/install';
+      if (!allowed) {
         router.replace('/');
       }
     }
@@ -127,6 +128,7 @@ export default function RootLayout() {
                 <Stack.Screen name="kitch-home" options={{ headerShown: false }} />
                 <Stack.Screen name="input" options={{ headerShown: false }} />
                 <Stack.Screen name="result" options={{ headerShown: false }} />
+                <Stack.Screen name="install" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="analyze-sheet"
                   options={{

@@ -5,7 +5,8 @@
   "framework": null,
   "build": {
     "env": {
-      "EXPO_PUBLIC_API_URL": "https://api-server-sharppinks-projects.vercel.app/api"
+      "EXPO_PUBLIC_API_URL": "https://api-server-sharppinks-projects.vercel.app/api",
+      "EXPO_PUBLIC_SITE_URL": "https://kitch-web.vercel.app"
     }
   },
   "rewrites": [
