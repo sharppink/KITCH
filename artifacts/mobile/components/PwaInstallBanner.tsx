@@ -1,10 +1,12 @@
 /**
- * PWA 설치 유도 — beforeinstallprompt 커스텀 UI
- * PC(Chrome·Edge)·Android Chrome 등에서 이벤트가 오면 표시.
- * iOS Safari 등은 해당 이벤트가 없어 배너가 뜨지 않을 수 있음.
+ * PWA 설치 유도 — 시안과 동일한 하단 배너
+ * - Chrome/Edge/Android: `beforeinstallprompt` → 「설치」가 브라우저 설치 다이얼로그 호출
+ * - iOS Safari 등: 해당 이벤트 없음 → 같은 배너로 안내 후 「설치」는 /install 단계별 안내로 이동
+ * - 그 외 BIP 지연: 일정 시간 후 수동 안내 모드
  */
 import { Feather } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,10 +34,33 @@ function isStandalonePwa(): boolean {
   );
 }
 
+/** iOS/iPadOS 브라우저(애플 정책상 beforeinstallprompt 없음 → 수동 안내) */
+function isIosBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/i.test(ua)) return true;
+  if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
+/** BIP가 오지 않을 때 수동 안내 배너를 띄우기까지 대기(ms). iOS는 즉시 수동 모드 */
+const MANUAL_FALLBACK_MS = 5500;
+
+type InstallMode = 'native' | 'manual' | null;
+
 export function PwaInstallBanner() {
   const insets = useSafeAreaInsets();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEventLike | null>(null);
-  const [visible, setVisible] = useState(false);
+  /** native: 브라우저 설치 API 사용 / manual: /install 안내 */
+  const [installMode, setInstallMode] = useState<InstallMode>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFallbackTimer = useCallback(() => {
+    if (fallbackTimerRef.current !== null) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -56,15 +81,47 @@ export function PwaInstallBanner() {
       return;
     }
 
+    const goNative = (e: BeforeInstallPromptEventLike) => {
+      clearFallbackTimer();
+      setDeferred(e);
+      setInstallMode('native');
+    };
+
     const applyCaptured = (e: BeforeInstallPromptEventLike | null | undefined) => {
       if (e && typeof e.prompt === 'function') {
-        setDeferred(e);
-        setVisible(true);
+        goNative(e);
       }
     };
 
-    /** 인라인 스크립트가 이미 저장해 둔 경우(프로덕션 번들 로드 전에 이벤트가 발생한 경우) */
+    /** 인라인 스크립트가 이미 저장해 둔 경우 */
     applyCaptured(window.__kitchDeferredInstallPrompt ?? null);
+
+    const scheduleManualFallback = () => {
+      clearFallbackTimer();
+      fallbackTimerRef.current = setTimeout(() => {
+        fallbackTimerRef.current = null;
+        if (window.__kitchDeferredInstallPrompt && typeof window.__kitchDeferredInstallPrompt.prompt === 'function') {
+          return;
+        }
+        try {
+          if (sessionStorage.getItem(STORAGE_DISMISS) === '1') return;
+        } catch {
+          return;
+        }
+        setInstallMode((m) => (m === 'native' ? 'native' : 'manual'));
+      }, MANUAL_FALLBACK_MS);
+    };
+
+    const hasNativePrompt =
+      window.__kitchDeferredInstallPrompt != null &&
+      typeof window.__kitchDeferredInstallPrompt.prompt === 'function';
+    if (!hasNativePrompt) {
+      if (isIosBrowser()) {
+        setInstallMode('manual');
+      } else {
+        scheduleManualFallback();
+      }
+    }
 
     const onEarlyCapture = () => {
       applyCaptured(window.__kitchDeferredInstallPrompt ?? null);
@@ -74,8 +131,7 @@ export function PwaInstallBanner() {
       e.preventDefault();
       const ev = e as BeforeInstallPromptEventLike;
       window.__kitchDeferredInstallPrompt = ev;
-      setDeferred(ev);
-      setVisible(true);
+      goNative(ev);
     };
 
     const onInstalled = () => {
@@ -85,7 +141,8 @@ export function PwaInstallBanner() {
         /* ignore */
       }
       window.__kitchDeferredInstallPrompt = null;
-      setVisible(false);
+      clearFallbackTimer();
+      setInstallMode(null);
       setDeferred(null);
     };
 
@@ -93,11 +150,12 @@ export function PwaInstallBanner() {
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
+      clearFallbackTimer();
       window.removeEventListener('kitch:pwa-install-prompt', onEarlyCapture);
       window.removeEventListener('beforeinstallprompt', onBeforeInstall);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, []);
+  }, [clearFallbackTimer]);
 
   const onDismiss = useCallback(() => {
     try {
@@ -108,11 +166,22 @@ export function PwaInstallBanner() {
     if (typeof window !== 'undefined') {
       window.__kitchDeferredInstallPrompt = null;
     }
-    setVisible(false);
+    clearFallbackTimer();
+    setInstallMode(null);
     setDeferred(null);
-  }, []);
+  }, [clearFallbackTimer]);
 
   const onInstall = useCallback(async () => {
+    if (installMode === 'manual') {
+      try {
+        sessionStorage.setItem(STORAGE_DISMISS, '1');
+      } catch {
+        /* ignore */
+      }
+      setInstallMode(null);
+      router.push('/install');
+      return;
+    }
     if (!deferred || typeof deferred.prompt !== 'function') return;
     try {
       await deferred.prompt();
@@ -124,11 +193,10 @@ export function PwaInstallBanner() {
       window.__kitchDeferredInstallPrompt = null;
     }
     setDeferred(null);
-    setVisible(false);
-  }, [deferred]);
+    setInstallMode(null);
+  }, [deferred, installMode]);
 
-  /** 브라우저 탭으로 열린 경우에만(standalone 아님). 설치 프롬프트를 받은 뒤에만 표시 — iOS Safari 등은 이벤트 없음 */
-  if (Platform.OS !== 'web' || !visible || !deferred) {
+  if (Platform.OS !== 'web' || installMode === null) {
     return null;
   }
 
