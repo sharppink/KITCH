@@ -11,10 +11,11 @@ import * as Linking from 'expo-linking';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PwaInstallBanner } from '@/components/PwaInstallBanner';
 import Colors from '@/constants/colors';
 import { initApiBase } from '@/constants/apiBase';
 
@@ -112,30 +113,33 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F5F5FA' }}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: Colors.background },
-                animation: 'slide_from_right',
-              }}
-            >
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="kiwoom-menu" options={{ headerShown: false, animation: 'slide_from_left' }} />
-              <Stack.Screen name="api-settings" options={{ headerShown: false }} />
-              <Stack.Screen name="kitch-home" options={{ headerShown: false }} />
-              <Stack.Screen name="input" options={{ headerShown: false }} />
-              <Stack.Screen name="result" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="analyze-sheet"
-                options={{
-                  presentation: 'formSheet',
-                  sheetAllowedDetents: [0.55],
-                  sheetGrabberVisible: false,
+            <View style={{ flex: 1 }}>
+              <Stack
+                screenOptions={{
                   headerShown: false,
-                  contentStyle: { backgroundColor: Colors.surface },
+                  contentStyle: { backgroundColor: Colors.background },
+                  animation: 'slide_from_right',
                 }}
-              />
-            </Stack>
+              >
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="kiwoom-menu" options={{ headerShown: false, animation: 'slide_from_left' }} />
+                <Stack.Screen name="api-settings" options={{ headerShown: false }} />
+                <Stack.Screen name="kitch-home" options={{ headerShown: false }} />
+                <Stack.Screen name="input" options={{ headerShown: false }} />
+                <Stack.Screen name="result" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="analyze-sheet"
+                  options={{
+                    presentation: 'formSheet',
+                    sheetAllowedDetents: [0.55],
+                    sheetGrabberVisible: false,
+                    headerShown: false,
+                    contentStyle: { backgroundColor: Colors.surface },
+                  }}
+                />
+              </Stack>
+            </View>
+            <PwaInstallBanner />
           </GestureHandlerRootView>
         </QueryClientProvider>
       </ErrorBoundary>

@@ -1,0 +1,234 @@
+/**
+ * PWA 설치 유도 — beforeinstallprompt 커스텀 UI
+ * PC(Chrome·Edge)·Android Chrome 등에서 이벤트가 오면 표시.
+ * iOS Safari 등은 해당 이벤트가 없어 배너가 뜨지 않을 수 있음.
+ */
+import { Feather } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const STORAGE_DISMISS = 'kitch_pwa_install_banner_dismissed';
+const STORAGE_INSTALLED = 'kitch_pwa_installed';
+
+/** Chrome beforeinstallprompt (타입 lib 미포함 대비) */
+type BeforeInstallPromptEventLike = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};
+
+function isStandalonePwa(): boolean {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+export function PwaInstallBanner() {
+  const insets = useSafeAreaInsets();
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEventLike | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    try {
+      if (sessionStorage.getItem(STORAGE_DISMISS) === '1') return;
+      if (localStorage.getItem(STORAGE_INSTALLED) === '1') return;
+    } catch {
+      return;
+    }
+
+    if (isStandalonePwa()) {
+      try {
+        localStorage.setItem(STORAGE_INSTALLED, '1');
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferred(e as BeforeInstallPromptEventLike);
+      setVisible(true);
+    };
+
+    const onInstalled = () => {
+      try {
+        localStorage.setItem(STORAGE_INSTALLED, '1');
+      } catch {
+        /* ignore */
+      }
+      setVisible(false);
+      setDeferred(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  const onDismiss = useCallback(() => {
+    try {
+      sessionStorage.setItem(STORAGE_DISMISS, '1');
+    } catch {
+      /* ignore */
+    }
+    setVisible(false);
+    setDeferred(null);
+  }, []);
+
+  const onInstall = useCallback(async () => {
+    if (!deferred || typeof deferred.prompt !== 'function') return;
+    try {
+      await deferred.prompt();
+      await deferred.userChoice;
+    } catch {
+      /* 사용자 취소 등 */
+    }
+    setDeferred(null);
+    setVisible(false);
+  }, [deferred]);
+
+  if (Platform.OS !== 'web' || !visible || !deferred) {
+    return null;
+  }
+
+  const bottomPad = Math.max(insets.bottom, 12);
+
+  return (
+    <View
+      style={[styles.wrap, { paddingBottom: bottomPad }]}
+      pointerEvents="box-none"
+    >
+      <View style={styles.card}>
+        <View style={styles.topRow}>
+          <View style={styles.iconBox}>
+            <Feather name="smartphone" size={22} color="#FFFFFF" />
+          </View>
+          <View style={styles.textCol}>
+            <Text style={styles.title}>앱으로 설치하기</Text>
+            <Text style={styles.desc}>
+              설치하면 브라우저 탭 없이 KITCH를 앱처럼 바로 열 수 있어요.
+            </Text>
+          </View>
+        </View>
+        <View style={styles.btnRow}>
+          <Pressable
+            onPress={onDismiss}
+            style={({ pressed }) => [styles.btnSecondary, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="닫기"
+          >
+            <Text style={styles.btnSecondaryText}>닫기</Text>
+          </Pressable>
+          <Pressable
+            onPress={onInstall}
+            style={({ pressed }) => [styles.btnPrimary, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="설치"
+          >
+            <Text style={styles.btnPrimaryText}>설치</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const NAVY = '#12146A';
+const NAVY_LIGHT = 'rgba(255,255,255,0.14)';
+const BTN_DARK = '#1E2B7A';
+
+const styles = StyleSheet.create({
+  wrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99999,
+    paddingHorizontal: 14,
+    pointerEvents: 'box-none',
+  },
+  card: {
+    backgroundColor: NAVY,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 14,
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: NAVY_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textCol: {
+    flex: 1,
+    gap: 6,
+  },
+  title: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  desc: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.88)',
+    lineHeight: 19,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 10,
+  },
+  btnSecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    backgroundColor: BTN_DARK,
+  },
+  btnPrimary: {
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  btnSecondaryText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  btnPrimaryText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    color: NAVY,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+});

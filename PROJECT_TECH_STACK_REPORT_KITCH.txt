@@ -1,0 +1,165 @@
+프로젝트 기술 스택 분석 보고서 — KITCH
+작성일: 2026-03-21
+대상 경로: KITCH 저장소 루트 (예: …/KITCH-master/KITCH-master)
+문서 목적: 프로젝트 구조, 핵심 기술, 운영 특성을 이해하기 위한 상세 기술 스택 설명
+
+
+--------------------------------------------------------------------------------
+요약
+--------------------------------------------------------------------------------
+
+이 프로젝트는 pnpm 기반 모노레포 위에 프론트엔드(Expo), API 서버(Express), UI 샌드박스(Vite), 공용 라이브러리(lib/*)를 두는 구조입니다. TypeScript를 공통 언어로 쓰며, 사용자 앱은 Expo Router와 React Native Web으로 모바일·웹 정적 산출물을 만들고, 백엔드는 Express와 OpenAI·Cheerio 등으로 URL 기반 콘텐츠 분석을 수행합니다.
+
+배포는 Vercel을 사용하되, 현재 설정 기준으로 웹 앱과 API는 서로 다른 Vercel 프로젝트·URL일 수 있으며, 웹 빌드 시 EXPO_PUBLIC_API_URL로 API 베이스를 지정해 연결합니다. 분석 기록은 주로 기기 로컬(AsyncStorage)에 저장되고, Drizzle/Postgres(lib/db)는 패키지로 포함되어 있으나 스키마가 비어 있고 API 서버에서 DB를 호출하는 코드는 현재 거의 없습니다.
+
+AI 분석은 RAG(벡터 검색)가 아니라, 해당 URL에서 추출한 텍스트를 프롬프트에 넣어 LLM을 호출하는 방식입니다.
+
+
+--------------------------------------------------------------------------------
+핵심 스택 한눈에 보기
+--------------------------------------------------------------------------------
+
+영역              주요 기술                                              의미
+프론트엔드        Expo Router, React 19, RN 0.81, RN Web, AsyncStorage   단일 코드베이스로 모바일·웹, 기록은 로컬 저장
+서버 상태         @tanstack/react-query                                   전역 QueryClientProvider 제공(분석·시세는 주로 fetch)
+백엔드            Express 5, OpenAI SDK, Cheerio, esbuild, tsx            URL 분석·외부 HTTP·AI 호출, 번들 후 서버리스
+데이터(준비)      Drizzle ORM, pg, zod, lib/db                            Postgres 연결 가능하나 스키마·연동은 미완
+배포/운영         Vercel(웹 정적 + API 별도 프로젝트), 환경 변수            EXPO_PUBLIC_* / AI 키 / DATABASE_URL 등
+
+
+--------------------------------------------------------------------------------
+1. 프로젝트 개요
+--------------------------------------------------------------------------------
+
+저장소는 pnpm workspace로 artifacts/*, lib/*, lib/integrations/*, scripts를 묶습니다. 실제 사용자 앱은 artifacts/mobile, HTTP API는 artifacts/api-server, UI 실험은 artifacts/mockup-sandbox, 공용 스키마·클라이언트 생성은 lib/api-zod·api-spec·api-client-react 등으로 나뉩니다.
+
+즉 “프론트만”이 아니라 화면·분석 API·UI 샌드박스·공용 타입이 한 레포에 있는 제품형 구조입니다.
+
+
+--------------------------------------------------------------------------------
+2. 런타임 · 언어 · 패키지 매니저
+--------------------------------------------------------------------------------
+
+기본 언어는 TypeScript(~5.9)이며, 루트 및 패키지에 typecheck 스크립트가 있어 빌드 전 타입 검사를 전제로 합니다.
+
+실행 런타임은 Node.js(>=20), 패키지 매니저는 packageManager 필드로 pnpm 10.32.1에 고정되어 있습니다. preinstall 등으로 설치 환경을 맞추려는 의도가 있습니다.
+
+pnpm-workspace.yaml에는 minimumReleaseAge: 1440(분)으로, npm 패키지가 게시된 지 최소 1일 지난 버전만 설치하는 공급망 완화 정책이 들어 있습니다. catalog로 공통 버전(react, zod, drizzle-orm 등)을 한곳에서 관리합니다.
+
+
+--------------------------------------------------------------------------------
+3. 프론트엔드 스택
+--------------------------------------------------------------------------------
+
+3.1 사용자 대상 앱 (artifacts/mobile)
+
+Expo SDK 54, Expo Router(~6), React 19, React Native 0.81, React Native Web 조합으로 파일 기반 라우팅(app/)과 iOS·Android·웹 타겟을 둡니다.
+
+@tanstack/react-query는 _layout.tsx에서 QueryClientProvider로 감싸져 있으나, 분석·시세·뉴스 호출은 services/*.ts의 fetch + useState/useEffect 패턴이 주를 이룹니다(생성된 useQuery 훅은 현재 거의 미사용).
+
+로컬 데이터는 @react-native-async-storage/async-storage로 분석 기록·폴더·API 베이스 override 등을 저장합니다.
+
+UX 보조로 expo-haptics, expo-linking(공유 URL), expo-linear-gradient, react-native-svg(차트), @expo/vector-icons, @expo-google-fonts/inter 등이 사용됩니다.
+
+웹 산출은 pnpm 스크립트 export:web → web-dist 정적 파일이며, 루트 vercel-build는 이 산출물을 Vercel 정적 호스팅에 올리는 흐름입니다.
+
+3.2 컴포넌트 미리보기 (artifacts/mockup-sandbox)
+
+Vite 7, React, Tailwind CSS 4, Radix UI 다수, framer-motion, react-hook-form, recharts 등 — 서비스 앱과 분리된 빠른 UI·프로토타입용 환경입니다.
+
+
+--------------------------------------------------------------------------------
+4. 백엔드 / API 스택
+--------------------------------------------------------------------------------
+
+Express 5 단일 앱(app.ts)에 cors, express.json, 라우터 마운트(/api 및 루트 호환).
+
+OpenAI Node SDK로 chat.completions 호출(환경 변수 AI_INTEGRATIONS_OPENAI_API_KEY 등). 뉴스는 Cheerio로 본문 추출, 유튜브는 InnerTube/oEmbed·자막 등, X는 oEmbed+Cheerio로 본문 추출 후 프롬프트에 넣습니다 — 전형적인 RAG(임베딩·벡터 DB 검색)는 아닙니다.
+
+개발은 tsx로 TypeScript 직접 실행, 프로덕션 빌드는 esbuild(build.ts)로 CJS 번들 후 Vercel 함수(api/index.js)에서 로드하는 형태입니다.
+
+라우트 예: /healthz, /analyze/*, /market/kospi 등.
+
+
+--------------------------------------------------------------------------------
+5. 데이터베이스 / 데이터 계층
+--------------------------------------------------------------------------------
+
+lib/db는 Drizzle ORM + node-postgres(pg), drizzle-kit push, drizzle-zod 연동을 전제로 합니다. 다만 schema는 사실상 비어 있고, artifacts/api-server 소스에서는 @workspace/db를 import하지 않습니다.
+
+.env의 DATABASE_URL이 Supabase 호스팅 Postgres 형태일 수 있으나, @supabase/supabase-js는 사용하지 않으며, 앱의 분석 이력은 AsyncStorage가 담당합니다.
+
+정리: “Postgres+Drizzle로 서버 영속화”는 레포에 준비만 되어 있고, 현재 제품 기능의 핵심 데이터 경로는 로컬 저장 + 무상태 API 분석에 가깝습니다.
+
+
+--------------------------------------------------------------------------------
+6. 배포 / 인프라 스택
+--------------------------------------------------------------------------------
+
+Vercel을 사용합니다.
+
+웹(루트 vercel.json): installCommand로 pnpm 설치, buildCommand로 vercel-build(모바일 export:web), outputDirectory는 artifacts/mobile/web-dist, SPA용 rewrites로 index.html 폴백. build.env에 EXPO_PUBLIC_API_URL로 API 서버 URL을 주입할 수 있습니다.
+
+API(artifacts/api-server/vercel.json): 모노레포 루트에서 설치 후 api-server만 빌드, rewrites로 /api/(.*) → /api 단일 엔트리.
+
+프론트와 API가 동일 도메인이 아닐 수 있으며, 브라우저에서는 CORS·HTTPS·Mixed Content(로컬 API override)를 apiBase.ts에서 고려합니다.
+
+
+--------------------------------------------------------------------------------
+7. 보안 및 운영 관점 특징
+--------------------------------------------------------------------------------
+
+pnpm minimumReleaseAge로 신규 악성 패키지 즉시 설치 위험을 낮춥니다.
+
+시크릿은 AI 키, DATABASE_URL 등을 .env / Vercel Environment Variables로 분리하는 전제입니다.
+
+저장소에 실제 비밀번호가 포함된 .env가 있으면 버전 관리에 올리지 말고 회전(재발급)해야 합니다.
+
+
+--------------------------------------------------------------------------------
+8. 현재 아키텍처 해석
+--------------------------------------------------------------------------------
+
+(1) Expo 기반 앱 계층: UI·내비게이션·로컬 기록.
+
+(2) Express API 계층: URL 수집·정규화·LLM 분석·시세·지수 프록시 등.
+
+(3) 데이터 계층: 제품 관점에서는 AsyncStorage가 핵심; 서버 DB는 확장 슬롯.
+
+(4) 배포: Vercel 정적 웹 + 별도 API 프로젝트(또는 동일 플랫폼 내 멀티 프로젝트).
+
+장점은 소규모 팀이 한 레포에서 화면과 API를 함께 발전시키기 쉽다는 점입니다. 과제는 서버리스 지연·외부 사이트 구조 변경·DB 미연동 시 서버 측 이력 부재 등입니다.
+
+
+--------------------------------------------------------------------------------
+9. 한 문장 요약
+--------------------------------------------------------------------------------
+
+TypeScript·pnpm 모노레포 위에서 Expo Router(RN Web) 클라이언트와 Express(OpenAI·스크래핑) API를 Vercel에 올려 운영하고, 분석 이력은 주로 기기 로컬에 두는 구조의 풀스택에 가까운 제품 레포입니다.
+
+
+--------------------------------------------------------------------------------
+10. 종합 평가
+--------------------------------------------------------------------------------
+
+기술 선택은 모바일·웹 동시 제공, 빠른 API 실험, 단일 레포 협업에 유리합니다. 타입·workspace·공급망 정책은 운영 의식이 반영되어 있습니다.
+
+향후 과제 예시: Drizzle 스키마·API와의 실제 연동, React Query와 생성 클라이언트(orval)의 본격 사용, 테스트 자동화, 서버리스 환경에서의 장시간 분석·타임아웃 대응 등입니다.
+
+
+--------------------------------------------------------------------------------
+부록. 실무에서 바로 짚을 포인트
+--------------------------------------------------------------------------------
+
+• 프론트는 Expo 생태계 + RN Web으로 웹 정적 배포가 중심이다.
+
+• 백엔드는 “외부 URL → 텍스트 추출 → LLM” 허브이며 RAG 인덱스는 없다.
+
+• lib/db·Postgres는 코드상 준비만 있고, 현재 앱 핵심 데이터는 로컬 AsyncStorage다.
+
+• Vercel에서 웹과 API URL이 분리될 수 있으므로 EXPO_PUBLIC_API_URL·CORS를 확인한다.
+
+• pnpm minimumReleaseAge 등 공급망 설정이 명시되어 있다.
+
+
+문서 끝.

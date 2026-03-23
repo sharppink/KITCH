@@ -1,0 +1,252 @@
+================================================================================
+  KITCH — 앱 사용 흐름별 기술 스택 보고서
+  (실제 코드 경로 기준: artifacts/mobile, artifacts/api-server)
+================================================================================
+
+이 문서는 사용자가 앱을 켜고 콘텐츠를 저장·조회하는 순서에 맞춰,
+각 단계에서 어떤 라이브러리·런타임·네트워크가 쓰이는지 정리한 것입니다.
+전체 목록형 설명은 TECH_STACK.txt를 참고하세요.
+
+
+--------------------------------------------------------------------------------
+0. 전체 여정 한눈에 (요약)
+--------------------------------------------------------------------------------
+
+  [앱 실행]
+      → 루트 레이아웃에서 폰트·API 베이스·전역 Provider 준비
+      → (웹) 세션/라우터 상태 초기화로 첫 화면 고정
+      → (네이티브) 공유 인텐트 URL이 있으면 입력 화면으로 진입
+
+  [키움 스타일 UI 셸]
+      → 하단 바에서 코스피 지수(백엔드) 주기 갱신
+      → 메뉴 → 그리드에서 「KITCH」 선택 시 본 서비스 홈(/)으로 이동
+
+  [KITCH 홈 index]
+      → AsyncStorage에 쌓인 분석 기록·폴더 표시 / 검색·필터
+      → FAB·시트로 URL 입력 후 서버 분석 → 기록 저장 → 결과 화면
+
+  [입력 input]
+      → 뉴스·유튜브·X URL 검증 후 POST /analyze/... → 결과 저장
+
+  [결과 result]
+      → 기록에서 JSON 복원, 섹터 뉴스·종목 시세는 추가 API 호출
+      → 메모·공유·차트 UI 등 클라이언트 전용 처리
+
+  [API 설정 api-settings]
+      → 원격 API 베이스 URL을 AsyncStorage(및 웹 localStorage)에 저장
+
+
+--------------------------------------------------------------------------------
+1. 앱 부팅 · 전역 셸 — app/_layout.tsx
+--------------------------------------------------------------------------------
+
+[ 내비게이션 / 라우팅 ]
+  • expo-router — Stack, `router.replace`/`push`, 파일 기반 화면(`app/*.tsx`).
+  • react-native-screens — 네이티브 스택 전환(애니메이션 `slide_from_right` 등).
+  • iOS `analyze-sheet` — `presentation: 'formSheet'`, 시트 높이(detents) 등.
+
+[ 전역 상태 / 비동기 ]
+  • @tanstack/react-query — `QueryClientProvider`로 앱 전체에 클라이언트 제공.
+    ※ 현재 모바일 소스에서는 `useQuery`/`useMutation` 직접 사용은 없고,
+      향후 OpenAPI 생성 훅이나 서버 상태 캐시 확장을 염두에 둔 구조입니다.
+  • 분석·시세·뉴스는 주로 `fetch` + 컴포넌트 `useState`/`useEffect`로 처리
+    (`services/aiAnalysis.ts`, `sectorNews.ts`, `stockPrice.ts`).
+
+[ UI 래퍼 ]
+  • react-native-safe-area-context — `SafeAreaProvider`, 노치·홈 인디케이터 대응.
+  • react-native-gesture-handler — `GestureHandlerRootView` (제스처 트리 루트).
+  • @/components/ErrorBoundary — 런타임 오류 시 폴백.
+
+[ 리소스 · 플랫폼 ]
+  • @expo-google-fonts/inter + expo-font — Inter 가중치 로딩, 네이티브는 폰트
+    준비될 때까지 렌더 지연(깜빡임 방지).
+  • expo-splash-screen — 네이티브만 스플래시 유지 후 `hideAsync`.
+  • expo-linking — (Android 등) 공유로 전달된 URL 수신 → `/input`으로 라우팅.
+
+[ API 주소 결정 — 앱이 네트워크 호출하기 전 ]
+  • @/constants/apiBase — `initApiBase()`:
+      - expo-constants — `EXPO_PUBLIC_*` 등 빌드 타임 환경 변수.
+      - @react-native-async-storage/async-storage — 사용자가 저장한 API override.
+      - React Native `Platform` — 웹에서 HTTPS 페이지일 때 localhost 혼합 콘텐츠 차단 등.
+  • 웹 전용: `sessionStorage`/`localStorage`에서 React Navigation·Expo Router
+    상태 키 제거 → 새로고침 시 항상 `/`부터 시작.
+
+
+--------------------------------------------------------------------------------
+2. 진입 경로 차이 (웹 vs 네이티브)
+--------------------------------------------------------------------------------
+
+[ 웹 ]
+  • `Platform.OS === 'web'`에서 `window.location.pathname !== '/'`이면
+    `router.replace('/')` — 배포 URL 직접 입력 시에도 KITCH 홈으로 통일.
+
+[ 네이티브 공유 ]
+  • `Linking.addEventListener('url')` / `getInitialURL()` — YouTube·http(s) URL을
+    구분해 `type`·`sharedUrl`과 함께 `/input`으로 이동 (`_layout.tsx`).
+
+
+--------------------------------------------------------------------------------
+3. 키움 스타일 하단 바 — components/KiwoomBottomBar.tsx
+--------------------------------------------------------------------------------
+
+[ UI ]
+  • React Native — `View`, `ScrollView`, `TouchableOpacity`, `ActivityIndicator`.
+  • @expo/vector-icons (Feather) — 메뉴 아이콘.
+  • react-native-safe-area-context — 하단 안전 영역 패딩.
+
+[ 데이터 ]
+  • 네트워크: `fetch(\`${getApiBaseUrl()}/market/kospi\`)` — GET, 60초 간격 폴링.
+  • 백엔드: Express `artifacts/api-server`의 `routes/market.ts` — Yahoo Finance
+    차트 API를 서버에서 호출 후 1분 메모리 캐시·stale 응답.
+
+[ 내비게이션 ]
+  • expo-router — `router.push('/kiwoom-menu')`로 전체 메뉴 화면.
+
+
+--------------------------------------------------------------------------------
+4. 키움 메뉴 → KITCH — app/kiwoom-menu.tsx
+--------------------------------------------------------------------------------
+
+[ UI ]
+  • ScrollView, 그리드 버튼, Feather 아이콘 — 증권 앱 스타일 목업.
+
+[ 전환 ]
+  • KITCH 타일(`isKitch`) 탭 시 `router.push('/')` — 본 앱 홈(`app/index.tsx`).
+
+
+--------------------------------------------------------------------------------
+5. KITCH 홈 — app/index.tsx (분석 기록·검색·폴더)
+--------------------------------------------------------------------------------
+
+[ 로컬 데이터 ]
+  • @/hooks/useAnalysisHistory — AsyncStorage 키 `@investlens_history`, 최대 20건.
+  • @/hooks/useFolders — AsyncStorage 키 `@kitch_folders`.
+  • JSON 직렬화/역직렬화 — `Date`는 `analyzedAt` 등 복원 시 `new Date(...)`.
+
+[ UI · 인터랙션 ]
+  • React Native — `Animated`(온보딩), `Modal`(날짜·알림·폴더 시트),
+    `Switch`, `KeyboardAvoidingView`, `TextInput` 검색.
+  • expo-haptics — 버튼 피드백.
+  • @expo/vector-icons — Feather.
+  • @/components/HistoryCard, SaveContentSheet, KiwoomBottomBar.
+
+[ 내비게이션 ]
+  • expo-router — 기록 카드 → `router.push({ pathname: '/result', params: { historyId, cached: 'true' } })`.
+  • FAB/저장 → `SaveContentSheet` 모달(내부에서 분석 후 결과로 이동).
+
+
+--------------------------------------------------------------------------------
+6. 콘텐츠 저장 시트 / 입력 화면 — SaveContentSheet, app/input.tsx
+--------------------------------------------------------------------------------
+
+[ URL 판별 ]
+  • @/services/youtube — `extractVideoId`, `isValidYouTubeUrl`.
+  • @/services/aiAnalysis — `isValidTwitterUrl` (정규식).
+
+[ 서버 분석 호출 ]
+  • @/services/aiAnalysis.ts — 브라우저/React Native 공통 `fetch`:
+      POST `{getApiBaseUrl()}/analyze/news` | `.../youtube` | `.../twitter`
+      본문 JSON `{ url }` (유튜브는 videoId 추출 후 url 포함).
+  • 응답을 `AnalysisResult` 타입으로 사용(클라이언트 타입 정의).
+
+[ 백엔드 (해당 요청 처리) ]
+  • Express `routes/analyze.ts` — OpenAI Node SDK, 시스템 프롬프트로 JSON 구조화 응답,
+    cheerio로 뉴스 HTML 파싱, 유튜브는 InnerTube/oEmbed 등으로 메타·자막 수집
+    (package에 ytdl·youtube-transcript 의존성은 있으나 주 경로는 동일 파일 내 구현 기준).
+  • Zod — `@workspace/api-zod`로 health 등 일부 응답 검증; analyze는 주로 LLM JSON 파싱.
+
+[ 저장 후 이동 ]
+  • useAnalysisHistory.saveToHistory — AsyncStorage 갱신.
+  • expo-router — `router.replace('/result', { historyId, cached: 'true' })`.
+
+[ UX ]
+  • expo-haptics — 성공/실패 진동.
+  • @/components/AnalysisLoadingOverlay, Toast — 진행·에러 표시.
+  • @/utils/apiErrorMessage — API 에러 메시지 정리.
+
+
+--------------------------------------------------------------------------------
+7. 유형 선택 시트 — app/analyze-sheet.tsx
+--------------------------------------------------------------------------------
+
+  • expo-router — `router.dismiss()` 후 `router.push('/input', { type })`.
+  • 옵션: 뉴스·유튜브(트위터는 입력 화면·저장 시트·공유 경로에서 처리).
+
+
+--------------------------------------------------------------------------------
+8. 결과 화면 — app/result.tsx
+--------------------------------------------------------------------------------
+
+[ 데이터 로드 ]
+  • 로컬: `historyId`로 `useAnalysisHistory`의 항목 조회 — 메모리 + AsyncStorage와 동기.
+  • 추가 네트워크:
+      - @/services/sectorNews.fetchSectorNews — GET
+        `{api}/analyze/sector/news?q=...` (서버에서 뉴스 검색/스크랩 로직).
+      - @/components/StockPriceRow → @/services/stockPrice.fetchStockPrice —
+        GET `{api}/analyze/stock/price?ticker=...`.
+
+[ UI 컴포넌트 ]
+  • expo-linear-gradient — 헤더·시트 등 그라데이션.
+  • react-native-svg — RadarChart(다각형·레이더 그리드).
+  • React Native — `useWindowDimensions`(StockPriceSheet 반응형 스케일), `Modal`,
+    `Share`, `Linking.openURL`, `Animated`.
+  • @/components/ProgressBar, SentimentBadge, StockPriceSheet, SwipeableMemoPanel 등.
+  • 주기적 갱신: `setInterval` 60초 — 시세 표시용 `stockRefreshKey`.
+
+[ 백엔드 시세·지수 ]
+  • market.ts — 코스피 지수(Yahoo).
+  • analyze 라우트 내 종목 시세 엔드포인트 — 티커별 시세(구현은 routes/analyze.ts).
+
+
+--------------------------------------------------------------------------------
+9. API 주소 설정 — app/api-settings.tsx
+--------------------------------------------------------------------------------
+
+  • expo-router — `useFocusEffect`로 화면 복귀 시 저장값 다시 읽기.
+  • @/constants/apiBase — `setApiBaseOverride`, `clearApiBaseOverride`,
+    `normalizeApiBaseInput`, AsyncStorage + 웹 localStorage.
+  • React Native — `Alert`, `ActivityIndicator`, `KeyboardAvoidingView`.
+
+
+--------------------------------------------------------------------------------
+10. HTTP 경로 정리 (클라이언트 → 서버)
+--------------------------------------------------------------------------------
+
+  클라이언트는 모두 `getApiBaseUrl()` 접두사 아래 호출합니다 (로컬/Vercel/ngrok 등).
+
+  • POST /analyze/news        — 뉴스 URL 분석
+  • POST /analyze/youtube     — 유튜브 URL 분석
+  • POST /analyze/twitter     — X(트위터) URL 분석
+  • GET  /analyze/sector/news — 섹터 관련 뉴스 목록 (쿼리 q)
+  • GET  /analyze/stock/price — 종목 시세 (쿼리 ticker)
+  • GET  /market/kospi        — 코스피 요약 시세
+  • GET  /healthz             — 헬스 (Zod 스키마로 응답 검증)
+
+  서버 측 라우터 마운트: `artifacts/api-server/src/app.ts` — `app.use("/api", router)`
+  및 Vercel 환경에서 루트에도 동일 라우터(경로 프리픽스 이슈 대응).
+
+
+--------------------------------------------------------------------------------
+11. 배포·빌드와 흐름의 연결
+--------------------------------------------------------------------------------
+
+  • 웹: Expo `export:web` → 정적 `web-dist` — Vercel이 호스팅, SPA rewrite.
+  • 빌드 시 `EXPO_PUBLIC_API_URL` 등으로 API 베이스가 박일 수 있음(vercel.json build.env).
+  • API 서버: 별도 Vercel 프로젝트, Node + Express 번들(esbuild) → serverless 핸들러.
+
+
+--------------------------------------------------------------------------------
+12. 워크스페이스 lib 패키지와 이 흐름의 관계
+--------------------------------------------------------------------------------
+
+  • @workspace/api-zod — API 응답/요청 스키마(예: health). analyze 본문은 주로 LLM JSON.
+  • @workspace/api-spec + orval — OpenAPI에서 클라이언트 코드 생성 파이프라인.
+  • @workspace/api-client-react — React Query 기반 생성 클라이언트 패키지.
+    모바일 앱은 현재 직접 `fetch` 위주이나, 동일 API에 맞춰 생성 코드로 이전 가능.
+  • @workspace/db + drizzle — 서버 측 DB 연동 시. 사용자 분석 기록의 “서버 영속화”는
+    이 앱 흐름에서는 AsyncStorage 중심(클라이언트 로컬).
+
+
+================================================================================
+  문서 끝
+================================================================================

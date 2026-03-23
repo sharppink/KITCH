@@ -1,0 +1,253 @@
+================================================================================
+  KITCH — 기술 스택 상세 정리
+  저장소: pnpm 모노레포 (KITCH-master 루트 기준)
+  문서 목적: 패키지·도구·역할을 한곳에서 참고할 수 있게 정리
+  관련 문서: APP_FLOW_TECH_REPORT.txt — 사용자/화면 흐름 순으로 기술 매핑
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. 공통 기반 (루트)
+--------------------------------------------------------------------------------
+
+[ 언어 / 런타임 ]
+  • TypeScript (~5.9)
+    - 정적 타입, 워크스페이스 전반에서 공통 사용.
+  • Node.js (>= 20)
+    - 빌드, 스크립트, API 서버, Expo CLI 등 실행 환경.
+
+[ 패키지 관리 ]
+  • pnpm 10.x (packageManager 필드로 버전 고정)
+    - workspace: 여러 패키지를 한 저장소에서 링크.
+    - catalog: pnpm-workspace.yaml에 공통 버전을 모아 중복·충돌 완화.
+    - workspace:* 의존성으로 내부 패키지 참조.
+
+[ 보안 정책 (pnpm-workspace.yaml) ]
+  • minimumReleaseAge: 1440 (분)
+    - npm 패키지가 게시된 지 최소 1일 지난 버전만 설치 (공급망 완화).
+  • onlyBuiltDependencies
+    - 네이티브 바이너리 빌드가 필요한 패키지 목록 (esbuild 등).
+  • overrides
+    - 플랫폼별 불필요 바이너리 제외, esbuild 버전 고정 등.
+
+[ 코드 품질 ]
+  • Prettier (^3.8) — 코드 포맷.
+  • TypeScript (~5.9) — tsc --build로 lib 등 프로젝트 참조 빌드.
+
+[ 루트 스크립트 요약 ]
+  • preinstall — scripts/preinstall.cjs (설치 전 검사/준비).
+  • vercel-build → Expo 웹 정적 내보내기 (Vercel 웹 배포).
+  • dev:vercel-static — vercel-build 후 `serve`로 web-dist 로컬 미리보기.
+  • typecheck — 라이브러리 + artifacts/**·scripts 타입 검사.
+  • deploy:vercel, push:github, git:account — PowerShell 헬퍼.
+
+
+--------------------------------------------------------------------------------
+2. 클라이언트 앱 — artifacts/mobile (@workspace/mobile)
+--------------------------------------------------------------------------------
+
+[ 성격 ]
+  • Expo 기반 React Native 앱.
+  • 동일 코드베이스로 iOS / Android / Web(정적 사이트) 타겟.
+  • 웹은 Metro 번들러로 export → web-dist (Vercel에 업로드).
+
+[ 핵심 프레임워크 ]
+  • Expo SDK ~54
+    - 개발 서버, 네이티브 모듈 브리지, 빌드 파이프라인.
+  • React 19.x (catalog 고정)
+    - Expo가 요구하는 버전에 맞춤.
+  • React Native 0.81.5
+    • 네이티브 UI 컴포넌트, 레이아웃 엔진.
+  • React Native Web
+    • RN 컴포넌트를 DOM으로 렌더 — 웹 빌드에 사용.
+  • Expo Router ~6
+    • 파일 기반 라우팅 (app/ 디렉터리), 딥링크·웹 URL 구조.
+  • React Compiler (expo experiments)
+    • 자동 메모이제이션 등 실험적 최적화 (babel-plugin-react-compiler).
+
+[ React Native 생태계 ]
+  • react-native-reanimated — 고성능 애니메이션.
+  • react-native-gesture-handler — 제스처.
+  • react-native-screens — 네이티브 스크린 최적화.
+  • react-native-safe-area-context — 노치/홈 인디케이터 안전 영역.
+  • react-native-svg — SVG 렌더.
+  • react-native-keyboard-controller — 키보드와 레이아웃 연동.
+  • react-native-worklets — Reanimated 등과 연계되는 워크릿 런타임.
+
+[ Expo 모듈 (기능별) ]
+  • expo-constants — 앱 메타·환경 상수.
+  • expo-font + @expo-google-fonts/inter — 폰트 로딩(Inter).
+  • @expo/vector-icons — 아이콘(Feather 등).
+  • expo-linear-gradient — 그라데이션.
+  • expo-blur, expo-glass-effect — 블러/글래스 UI.
+  • expo-image — 이미지 최적화 로딩.
+  • expo-image-picker — 갤러리/카메라.
+  • expo-haptics — 진동 피드백.
+  • expo-linking — URL/딥링크.
+  • expo-location — 위치(권한에 따라).
+  • expo-web-browser — 인앱 브라우저(SFSafari/Chrome Custom Tabs).
+  • expo-system-ui — 상태바 등 시스템 UI.
+  • expo-splash-screen, expo-status-bar, expo-symbols — 스플래시·상태바·심볼.
+  • @react-native-async-storage/async-storage — 로컬 키-값 저장(설정·캐시).
+  • @expo/ngrok — 개발 시 터널(선택).
+
+[ 데이터 / 검증 ]
+  • @tanstack/react-query — 서버 상태, 캐시, 재시도, 로딩 상태.
+  • zod, zod-validation-error — 스키마 검증·에러 메시지.
+  • @workspace/api-client-react — OpenAPI 기반 API 클라이언트(워크스페이스 패키지).
+
+[ 개발 도구 ]
+  • @babel/core — JS/TS 트랜스파일.
+  • @expo/cli — Expo 명령행.
+  • TypeScript — 타입 검사.
+
+[ 웹 전용 / 호환 ]
+  • react-dom — 웹 마운트.
+  • @ungap/structured-clone — structuredClone 폴리필(환경에 따라).
+  • @stardazed/streams-text-encoding — 스트림/텍스트 인코딩 호환.
+
+[ 앱 설정 (app.json) ]
+  • newArchEnabled: true — React Native 새 아키텍처.
+  • 웹: Metro 번들러, single 페이지 출력, 테마 컬러.
+  • Android: 공유 인텐트, YouTube URL 뷰 등 intentFilters.
+
+
+--------------------------------------------------------------------------------
+3. API 서버 — artifacts/api-server (@workspace/api-server)
+--------------------------------------------------------------------------------
+
+[ 성격 ]
+  • Express 기반 HTTP API.
+  • 로컬: Node가 포트 리슨(API_PORT, .env).
+  • Vercel: esbuild로 번들 → serverless 함수(api/index.js) + rewrites로 /api/* 처리.
+
+[ 런타임 / 프레임워크 ]
+  • Express 5 — 라우팅, 미들웨어.
+  • cors — 교차 출처 요청 허용.
+  • cookie-parser — 쿠키 파싱.
+
+[ 빌드 / 실행 ]
+  • TypeScript 소스 → esbuild(build.ts) → dist/*.cjs (CommonJS) — 번들·트리 쉐이킹, Vercel용 단일 엔트리.
+  • tsx — 개발 시 TS 직접 실행, 빌드 스크립트 실행.
+
+[ 비즈니스 / 외부 연동 ]
+  • openai — OpenAI API(분석·텍스트 등).
+  • cheerio — HTML 파싱(서버 사이드 jQuery 유사).
+  • @distube/ytdl-core, youtube-transcript — 의존성에 포함(과거·대체 경로). 현재 뉴스·유튜브
+    분석 루트는 주로 analyze.ts 내 InnerTube/oEmbed·Cheerio 등으로 동작.
+
+[ 내부 모듈 ]
+  • @workspace/api-zod — 요청/응답 Zod 스키마.
+  • @workspace/db — Drizzle 스키마·연결(공유 DB 패키지). package.json에는 의존성으로 있으나,
+    현재 api-server 소스에서는 import·쿼리 미사용.
+  • drizzle-orm — api-server package.json에 의존성으로 포함(향후 DB 연동 시 사용 가능).
+
+
+--------------------------------------------------------------------------------
+4. 데이터베이스 — lib/db (@workspace/db)
+--------------------------------------------------------------------------------
+
+  • drizzle-orm — 타입 안전 SQL 빌더, PostgreSQL 등.
+  • drizzle-zod — Drizzle 스키마와 Zod 연동.
+  • drizzle-kit — 마이그레이션/스키마 푸시 도구.
+  • pg — node-postgres 드라이버.
+  • zod — 스키마 정의.
+
+  (실제 연결 문자열은 DATABASE_URL 등 환경 변수 — 예: Supabase Postgres.)
+
+
+--------------------------------------------------------------------------------
+5. API 계약 / 클라이언트 생성 — lib/*
+--------------------------------------------------------------------------------
+
+[ lib/api-zod ]
+  • zod만 의존 — 공통 DTO·검증 스키마.
+
+[ lib/api-spec ]
+  • orval — OpenAPI 스펙에서 클라이언트/타입 코드 생성(orval.config.ts).
+  • codegen 스크립트로 API 바인딩 갱신.
+
+[ lib/api-client-react ]
+  • @tanstack/react-query — 생성된 훅과 함께 쓰는 래퍼.
+  • custom fetch — 응답 파싱, ApiError 등 (src/custom-fetch.ts).
+  • peer: react >= 18.
+
+
+--------------------------------------------------------------------------------
+6. 스크립트 패키지 — scripts (@workspace/scripts)
+--------------------------------------------------------------------------------
+
+  • tsx — TypeScript 실행.
+  • @types/node — Node 타입.
+  • 유틸/예제 스크립트(hello 등)용 경량 패키지.
+
+
+--------------------------------------------------------------------------------
+7. 목업/샌드박스 UI — artifacts/mockup-sandbox (@workspace/mockup-sandbox)
+--------------------------------------------------------------------------------
+
+  (메인 KITCH 앱과 별도 — Vite 기반 웹 UI 실험/목업용.)
+
+[ 빌드 ]
+  • Vite 7 — 개발 서버, HMR, 프로덕션 번들.
+  • @vitejs/plugin-react — React 플러그인.
+  • @tailwindcss/vite — Tailwind CSS 4 Vite 통합.
+
+[ UI ]
+  • React + React DOM (catalog).
+  • Radix UI — 접근 가능한 언스타일드 프리미티브(다수 패키지).
+  • tailwindcss, tailwind-merge, tailwindcss-animate, tw-animate-css — 유틸리티 CSS.
+  • class-variance-authority, clsx — 클래스 조합.
+  • lucide-react — 아이콘.
+  • framer-motion — 애니메이션.
+  • react-hook-form, @hookform/resolvers — 폼 + Zod 연동.
+  • cmdk — 커맨드 팔레트 UI.
+  • embla-carousel-react — 캐러셀.
+  • recharts — 차트.
+  • sonner — 토스트.
+  • vaul — 드로어(모바일 친화).
+  • next-themes — 다크/라이트 테마.
+  • react-day-picker, date-fns — 날짜.
+  • input-otp — OTP 입력.
+  • react-resizable-panels — 리사이즈 패널.
+
+[ Replit 전용(선택) ]
+  • @replit/vite-plugin-cartographer, runtime-error-modal — 개발 UX.
+
+[ 기타 ]
+  • zod — 스키마.
+  • chokidar, fast-glob — 파일 감시/글롭(도구·스크립트용).
+
+
+--------------------------------------------------------------------------------
+8. 인프라 / 배포
+--------------------------------------------------------------------------------
+
+[ Vercel — 웹 프론트 (루트 vercel.json) ]
+  • installCommand: corepack으로 pnpm 고정 후 frozen-lockfile 설치.
+  • buildCommand: pnpm run vercel-build (Expo web export).
+  • outputDirectory: artifacts/mobile/web-dist — 정적 파일.
+  • rewrites: SPA 라우팅(정적 자산·_expo 제외 시 index.html).
+  • build.env: EXPO_PUBLIC_API_URL — 클라이언트에 박히는 API 베이스 URL.
+
+[ Vercel — API (artifacts/api-server/vercel.json) ]
+  • 모노레포 루트에서 pnpm install 후 api-server만 빌드.
+  • rewrites: /api/(.*) → /api 단일 서버리스 엔트리.
+  • public/index.html — 루트 안내용 정적 파일(빈 출력 디렉터리 오류 방지용).
+
+[ 환경 변수 (개념) ]
+  • EXPO_PUBLIC_* — Expo 번들에 노출(공개 전제).
+  • AI_INTEGRATIONS_OPENAI_API_KEY, DATABASE_URL 등 — 서버 전용(Vercel Env, .env).
+
+
+--------------------------------------------------------------------------------
+9. 기타
+--------------------------------------------------------------------------------
+
+  • PWA: artifacts/mobile/public — service worker 등(최소 등록).
+  • Git / GitHub: scripts로 푸시·계정 설정 보조.
+  • PowerShell: Windows 환경 배포·깃 자동화.
+
+================================================================================
+  문서 끝 — 버전은 배포 시점의 package.json / pnpm-lock 기준으로 달라질 수 있음
+================================================================================

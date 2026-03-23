@@ -1,0 +1,72 @@
+KITCH — 핵심 기능별 사용 도구·라이브러리 (구글 닥스 붙여넣기용)
+작성 목적: 표 대신 짧은 줄로 정리해 붙여넣은 뒤 제목 스타일만 지정하면 읽기 쉽게 쓸 수 있게 함.
+
+
+[1. 앱 화면·화면 이동]
+- Expo, Expo Router, React, React Native, React Native Web
+
+
+[2. 링크 입력·결과 화면·기록 목록·폴더]
+- React Native UI
+- AsyncStorage (기기 안에 기록 저장)
+
+
+[3. 서버로 분석 요청]
+- 브라우저·앱 공통 fetch
+- apiBase 설정: Expo Constants, AsyncStorage, (웹) localStorage
+
+
+[4. 뉴스 기사 본문 가져오기]
+- Express (API 서버)
+- Cheerio (HTML에서 본문 추출)
+
+
+[5. 유튜브·X(트위터) 텍스트]
+- Express
+- 유튜브: InnerTube / oEmbed 등 (코드 기준 주 경로)
+- X: oEmbed + Cheerio
+
+
+[6. AI 요약·신뢰도·추천 종목 등]
+- OpenAI SDK (chat.completions)
+- 시스템 프롬프트로 JSON 형식 응답
+
+
+[7. 코스피·종목 시세·섹터 관련 뉴스]
+- Express 라우트
+- 외부 HTTP (예: Yahoo Finance 등)
+- 클라이언트는 fetch로 호출
+
+
+[8. API 서버 빌드·배포]
+- Node.js, Express 5
+- esbuild (번들)
+- Vercel (서버리스 등)
+
+
+[9. 폰트·아이콘·진동·공유 링크]
+- expo-font, Inter 폰트 패키지
+- @expo/vector-icons
+- expo-haptics
+- expo-linking
+
+
+[10. 차트·그라데이션]
+- react-native-svg (레이더 차트 등)
+- expo-linear-gradient
+
+
+[11. 모노레포·패키지 관리]
+- pnpm (workspace, catalog)
+
+
+[12. 데이터베이스 (현재는 준비 수준)]
+- Drizzle ORM, PostgreSQL용 드라이버 (lib/db, 스키마·API 연동은 미완)
+- Supabase는 DB URL 예시로 쓸 수 있으나, 앱 기록의 핵심은 AsyncStorage
+
+
+[한 줄 요약]
+화면은 Expo·RN, 저장은 AsyncStorage, 분석·시세는 Express + OpenAI + Cheerio·외부 API, 배포는 Vercel.
+
+
+끝.
